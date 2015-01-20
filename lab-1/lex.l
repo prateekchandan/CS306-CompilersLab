@@ -24,8 +24,8 @@ for									return FOR;
 "++"								return INC_OP;
 "--"								return DEC_OP;
 
-[[:alpha:]_][[:alpha:][:digit:]_]*								return IDENTIFIER;
-[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?							return FLOAT_CONSTANT;
-[-+]?(([1-9][0-9]*)|(0[bB][01]*)|(0[0-7]*)|(0[xX][0-9a-fA-F]*))	return INT_CONSTANT;
+[[:alpha:]_][[:alpha:][:digit:]_]*													return IDENTIFIER;
+[-+]?(([1-9][0-9]*)|(0[bB][01]*)|(0[0-7]*)|(0[xX][0-9a-fA-F]*))						return INT_CONSTANT;
+[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?|[-+]?[0-9]+\.?[0-9]*([eE][-+]?[0-9]+)?		return FLOAT_CONSTANT;
 
 .									return matched()[0];
