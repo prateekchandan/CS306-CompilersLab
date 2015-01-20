@@ -1,6 +1,6 @@
 %%
 
-\"(\\.|[^"])*\"						return STRING_LITERAL;
+\"(\\[nt"\\]|[^"\\])*\"						return STRING_LITERAL;
 
 \/\/[^\n]*[\n]						// skip line comments
 \/\*([^*]*\*+[^*/])*[^*]*\*+\/		// skip block comments
