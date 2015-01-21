@@ -7,7 +7,7 @@ test: lex.l
 	sed -i '/int lex()/r enums' Scanner.h
 
 clean:
-	rm -rf a.out Scanner*
+	rm -rf a.out Scanner* lex.cc
 
 
 
