@@ -26,6 +26,6 @@ for									return Parser::FOR;
 
 [[:alpha:]_][[:alpha:][:digit:]_]*													return Parser::IDENTIFIER;
 [-+]?(([1-9][0-9]*)|(0[bB][01]*)|(0[0-7]*)|(0[xX][0-9a-fA-F]*))						return Parser::INT_CONSTANT;
-[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?|[-+]?[0-9]+\.?[0-9]*([eE][-+]?[0-9]+)?		return Parser::FLOAT_CONSTANT;
+([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)|([-+]?[0-9]+\.?[0-9]*([eE][-+]?[0-9]+)?)		return Parser::FLOAT_CONSTANT;
 
 .									return matched()[0];
