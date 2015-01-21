@@ -138,7 +138,7 @@ l_expression
 	
 expression_list
 	: expression
-	| exprssion_list ',' expression
+	| expression_list ',' expression
 	;
 	
 unary_operator

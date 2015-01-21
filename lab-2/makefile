@@ -1,6 +1,6 @@
 all:    lex.cc parse.cc main.cc Scanner.h Scannerbase.h Scanner.ih Parser.h Parserbase.h Parser.ih
 	g++   --std=c++0x lex.cc parse.cc main.cc;
-	a.out < test-assembly > junk;
+	./a.out < test-cpp > junk;
 	egrep 'nextToken|reduce' junk
         
 
@@ -23,3 +23,6 @@ Parserbase.h: parse.y
 Scanner.ih: lex.l
 Scanner.h: lex.l
 Scannerbase.h: lex.l
+
+clean:
+	rm -rf Parser* Scanner* a.out junk lex.cc parse.cc junk
