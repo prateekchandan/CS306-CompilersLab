@@ -104,95 +104,139 @@ assignment_statement
 
 expression
 	: logical_and_expression
+		{std::cout<<"dot: expression -> logical_and_expression";}
 	| expression OR_OP logical_and_expression
+		{std::cout<<"dot: expression -> {expression OR_OP logical_and_expression}";}
 	;
 
 logical_and_expression
 	: equality_expression
+		{std::cout<<"dot: logical_and_expression -> equality_expression";}
 	| logical_and_expression AND_OP equality_expression
+		{std::cout<<"dot: logical_and_expression -> {logical_and_expression AND_OP equality_expression}";}
 	;
 
 equality_expression
 	: relational_expression
+		{std::cout<<"dot: equality_expression -> relational_expression";}
 	| equality_expression EQ_OP relational_expression
+		{std::cout<<"dot: equality_expression -> {equality_expression EQ_OP relational_expression}";}
 	| equality_expression NE_OP relational_expression
+		{std::cout<<"dot: equality_expression -> {equality_expression NE_OP relational_expression}";}
 	;
 	
 relational_expression
 	: additive_expression
+		{std::cout<<"dot: relational_expression -> additive_expression";}
 	| relational_expression '<' additive_expression
+		{std::cout<<"dot: relational_expression -> {relational_expression \"<\" additive_expression}";}
 	| relational_expression '>' additive_expression
+		{std::cout<<"dot: relational_expression -> {relational_expression \">\" additive_expression}";}
 	| relational_expression LE_OP additive_expression
+		{std::cout<<"dot: relational_expression -> {relational_expression LE_OP additive_expression}";}
 	| relational_expression GE_OP additive_expression
+		{std::cout<<"dot: relational_expression -> {relational_expression GE_OP additive_expression}";}
 	;
 
 additive_expression
 	: multiplicative_expression
+		{std::cout<<"dot: additive_expression -> multiplicative_expression";}
 	| additive_expression '+' multiplicative_expression
+		{std::cout<<"dot: additive_expression -> {additive_expression \"+\" multiplicative_expression}";}
 	| additive_expression '-' multiplicative_expression
+		{std::cout<<"dot: additive_expression -> {additive_expression \"-\" multiplicative_expression}";}
 	;
 
 multiplicative_expression
 	: unary_expression
+		{std::cout<<"dot: multiplicative_expression -> unary_expression";}
 	| multiplicative_expression '*' unary_expression
+		{std::cout<<"dot: multiplicative_expression -> {multiplicative_expression \"*\" unary_expression}";}
 	| multiplicative_expression '/' unary_expression
+		{std::cout<<"dot: multiplicative_expression -> {multiplicative_expression \"/\" unary_expression}";}
 	;
 
 unary_expression
 	: postfix_expression
+		{std::cout<<"dot: unary_expression -> postfix_expression";}
 	| unary_operator postfix_expression
+		{std::cout<<"dot: unary_expression -> {unary_operator postfix_expression}";}
 	;
 
 postfix_expression
 	: primary_expression
+		{std::cout<<"dot: postfix_expression -> primary_expression";}
 	| IDENTIFIER '(' ')'
+		{std::cout<<"dot: postfix_expression -> {IDENTIFIER \"(\" \")\"}";}
 	| IDENTIFIER '(' expression_list ')'
+		{std::cout<<"dot: postfix_expression -> {IDENTIFIER \"(\" expression_list \")\"}";}
 	| l_expression INC_OP
+		{std::cout<<"dot: postfix_expression -> {l_expression INC_OP}";}
 	| l_expression DEC_OP
+		{std::cout<<"dot: postfix_expression -> {l_expression DEC_OP}";}
 	;
 
 primary_expression
 	: l_expression
+		{std::cout<<"dot: primary_expression -> l_expression";}
 	| INT_CONSTANT
+		{std::cout<<"dot: primary_expression -> INT_CONSTANT";}
 	| FLOAT_CONSTANT
+		{std::cout<<"dot: primary_expression -> FLOAT_CONSTANT";}
 	| STRING_LITERAL
+		{std::cout<<"dot: primary_expression -> STRING_LITERAL";}
 	| '(' expression ')'
+		{std::cout<<"dot: primary_expression -> { \"(\" expression \")\" }";}
 	;
 
 l_expression
 	: IDENTIFIER
+		{std::cout<<"dot: l_expression -> IDENTIFIER";}
 	| l_expression '[' expression ']' 
+		{std::cout<<"dot: l_expression -> { l_expression \"[\" expression \"]\" }";}
 	;
 	
 expression_list
 	: expression
+		{std::cout<<"dot: expression_list -> expression";}
 	| expression_list ',' expression
+		{std::cout<<"dot: expression_list -> { expression_list \",\" expression }";}
 	;
 	
 unary_operator
 	: '-'
+		{std::cout<<"dot: unary_operator -> \"-\"";}
 	| '!'
+		{std::cout<<"dot: unary_operator -> \"!\"";}
 	;
 
 selection_statement
 	: IF '(' expression ')' statement ELSE statement
+		{std::cout<<"dot: selection_statement -> { IF \"(\" expression \")\" statement ELSE statement }";}
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement
+		{std::cout<<"dot: iteration_statement -> { WHILE \"(\" expression \")\" statement }";}
 	| FOR '(' assignment_statement expression ';' assignment_statement ')' statement
+		{std::cout<<"dot: iteration_statement -> { FOR \"(\" assignment_statement expression \";\" assignment_statement \")\" statement }";}
 	;
 
 declaration_list
 	: declaration
+		{std::cout<<"dot: declaration_list -> declaration";}
 	| declaration_list declaration
+		{std::cout<<"dot: declaration_list -> { declaration_list declaration }";}
 	;
 
 declaration
-	: type_specifier declarator_list';'
+	: type_specifier declarator_list ';'
+		{std::cout<<"dot: declaration -> { type_specifier declarator_list \";\" }";}
 	;
 
 declarator_list
 	: declarator
+		{std::cout<<"dot: declarator_list -> declarator";}
 	| declarator_list ',' declarator
+		{std::cout<<"dot: declarator_list -> { declarator_list \",\" declarator }";}
 	;

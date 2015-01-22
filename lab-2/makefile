@@ -6,7 +6,10 @@ all:    lex.cc parse.cc main.cc Scanner.h Scannerbase.h Scanner.ih Parser.h Pars
 	dot -Tps graph1.gv -o graph1.ps
 	gnome-open graph1.ps
         
-
+graph:
+	dot -Tps graph1.gv -o graph1.ps
+	gnome-open graph1.ps
+	
 lex.cc: lex.l Scanner.ih 
 	./cond_remove_scannerih; 
 	flexc++ lex.l; 
