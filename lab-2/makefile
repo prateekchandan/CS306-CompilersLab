@@ -2,6 +2,9 @@ all:    lex.cc parse.cc main.cc Scanner.h Scannerbase.h Scanner.ih Parser.h Pars
 	g++   --std=c++0x lex.cc parse.cc main.cc;
 	./a.out < test-cpp > junk;
 	egrep 'nextToken|reduce' junk
+	egrep 'dot' junk | python process_dot.py  > graph1.gv
+	dot -Tps graph1.gv -o graph1.ps
+	gnome-open graph1.ps
         
 
 lex.cc: lex.l Scanner.ih 
@@ -25,4 +28,4 @@ Scanner.h: lex.l
 Scannerbase.h: lex.l
 
 clean:
-	rm -rf Parser* Scanner* a.out junk lex.cc parse.cc junk
+	rm -rf Parser* Scanner* a.out junk lex.cc parse.cc junk graph1*

@@ -13,65 +13,93 @@
 
 translation_unit
 	: function_definition
+		{std::cout<<"dot: translation_unit -> function_definition";}
 	| translation_unit function_definition
+		{std::cout<<"dot: translation_unit -> {translation_unit function_definition}";}
 	;
 	
 function_definition
 	: type_specifier fun_declarator compound_statement
+		{std::cout<<"dot: function_definition -> {type_specifier fun_declarator compound_statement}";}
 	;
 
 type_specifier
 	: VOID
+		{std::cout<<"dot: type_specifier -> VOID";}
 	| INT
+		{std::cout<<"dot: type_specifier -> INT";}
 	| FLOAT
+		{std::cout<<"dot: type_specifier -> FLOAT";}
 	;
 
 fun_declarator
 	: IDENTIFIER '(' parameter_list ')'
+		{std::cout<<"dot: fun_declarator -> {IDENTIFIER \"(\"  parameter_list \")\" }";}
 	| IDENTIFIER '(' ')'
+		{std::cout<<"dot: fun_declarator -> {IDENTIFIER \"(\" \")\" }";}
 	;
 
 parameter_list
 	: parameter_declaration
+		{std::cout<<"dot: parameter_list -> parameter_declaration";}
 	| parameter_list ',' parameter_declaration
+		{std::cout<<"dot: parameter_list -> {parameter_list \",\" parameter_declaration}";}
 	;
 
 parameter_declaration
 	: type_specifier declarator
+		{std::cout<<"dot: parameter_declaration -> {type_specifier declarator}";}
 	;
 
 declarator
 	: IDENTIFIER
+		{std::cout<<"dot: declarator -> IDENTIFIER";}
 	| declarator '[' constant_expression ']'
+		{std::cout<<"dot: declarator \"[\" constant_expression \"]\"";}
 	;
 
 constant_expression
 	: INT_CONSTANT
+		{std::cout<<"dot: constant_expression -> INT_CONSTANT";}
 	| FLOAT_CONSTANT
+		{std::cout<<"dot: constant_expression -> FLOAT_CONSTANT";}
 	;
 
 compound_statement
 	: '{' '}'
+		{std::cout<<"dot: compound_statement -> {\"{\" \"}\"}";}
 	| '{' statement_list '}'
+		{std::cout<<"dot: compound_statement -> {\"{\" statement_list \"}\"}";}
+
 	| '{' declaration_list statement_list '}'
+		{std::cout<<"dot: compound_statement -> {\"{\" declaration_list statement_list \"}\"}";}
 	;
 
 statement_list
 	: statement
+		{std::cout<<"dot: statement_list -> statement";}
 	| statement_list statement
+		{std::cout<<"dot: statement_list -> {statement_list statement}";}
 	;
 
 statement
 	: compound_statement
+		{std::cout<<"dot: statement -> compound_statement";}
 	| selection_statement
+		{std::cout<<"dot: statement -> selection_statement";}
 	| iteration_statement
+		{std::cout<<"dot: statement -> iteration_statement";}
 	| assignment_statement
+		{std::cout<<"dot: statement -> assignment_statement";}
 	| RETURN expression ';'
+		{std::cout<<"dot: statement -> {RETURN expression \";\"}";}
 	;
 
 assignment_statement
 	: ';'
+		{std::cout<<"dot: assignment_statement -> \";\"";}
 	|  l_expression '=' expression ';'
+		{std::cout<<"dot: assignment_statement -> {l_expression \"=\" expression \";\" }";}
 	;
 
 expression
