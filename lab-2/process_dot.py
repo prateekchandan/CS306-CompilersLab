@@ -2,7 +2,7 @@ import sys
 
 lines=[]
 for line in sys.stdin:
-	lines.append(line[len("dot: "):(line.index("... action")-4)])
+	lines.append(line[len("dot: "):-1])
 
 print "strict digraph G{"
 for line in lines:
