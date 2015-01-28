@@ -421,13 +421,13 @@ unary_expression
 	: postfix_expression
 		{
 			$$=++node_count;
-			std::cout<<"dot: unary_expressio_"<<$$<<" [label=\"unary_expressio\"]\n";
+			std::cout<<"dot: unary_expression_"<<$$<<" [label=\"unary_expression\"]\n";
 			std::cout<<"dot: unary_expression_"<<$$<<" -> postfix_expression_"<<$1<<"\n";
 		}
 	| unary_operator postfix_expression
 		{
 			$$=++node_count;
-			std::cout<<"dot: unary_expressio_"<<$$<<" [label=\"unary_expressio\"]\n";
+			std::cout<<"dot: unary_expression_"<<$$<<" [label=\"unary_expression\"]\n";
 			std::cout<<"dot: unary_expression_"<<$$<<" -> {unary_operator_"<<$1<<" postfix_expression_"<<$2<<"}\n";
 		}
 	;
@@ -439,7 +439,7 @@ postfix_expression
 		{
 			$$=++node_count;
 			std::cout<<"dot: postfix_expression_"<<$$<<" [label=\"postfix_expression\"]\n";
-			std::cout<<"dot: postfix_expression_"<<$$<<" -> primary_expression"<<$1<<"\n";
+			std::cout<<"dot: postfix_expression_"<<$$<<" -> primary_expression_"<<$1<<"\n";
 		}
 	| IDENTIFIER '(' ')'
 		{
@@ -495,6 +495,7 @@ primary_expression
 		{
 			$$=++node_count;
 			$1=++node_count;
+			std::cout<<"dot: primary_expression_"<<$$<<" [label=\"primary_expression\"]\n";
 			std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"INT_CONSTANT\"]\n";
 			std::cout<<"dot: primary_expression_"<<$$<<" -> TERMINAL_"<<$1<<"\n";
 		}
@@ -626,6 +627,7 @@ iteration_statement
 		    std::cout<<"dot: iteration_statement_"<<$$<<" -> { TERMINAL_"<<$1<<" TERMINAL_"<<$2
 		    <<" assignment_statement_"<<$3<<" expression_"<<$4<<" TERMINAL_"<<$5
 		    <<" assignment_statement_"<<$6<<" TERMINAL_"<<$7<<" statement_"<<$8<<"}\n";
+		}
 	;
 
 declaration_list
