@@ -224,164 +224,454 @@ statement
 		{
 			$$=++node_count;
 			std::cout<<"dot: statement_"<<$$<<" [label=\"statement\"]\n";
-			std::cout<<"dot: statement -> iteration_statement\n";
+			std::cout<<"dot: statement_"<<$$<<" -> iteration_statement_"<<$1<<"\n";
 		}
 	| assignment_statement
 		{
 			$$=++node_count;
 			std::cout<<"dot: statement_"<<$$<<" [label=\"statement\"]\n";
-			std::cout<<"dot: statement -> assignment_statement\n";
+			std::cout<<"dot: statement_"<<$$<<" -> assignment_statement_"<<$1<<"\n";
 		}
 	| RETURN expression ';'
 		{
 			$$=++node_count;
 			std::cout<<"dot: statement_"<<$$<<" [label=\"statement\"]\n";
-			std::cout<<"dot: statement -> {RETURN expression \";\"}\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"RETURN\"]\n";
+			$1=node_count;
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\";\"]\n";
+			$3=node_count;
+			std::cout<<"dot: statement_"<<$$<<" -> {TERMINAL_"<<$1<<" expression_"<<$2<<" TERMINAL_"<<$3<<"}\n";
 		}
 	;
 
 assignment_statement
 	: ';'
-		{std::cout<<"dot: assignment_statement -> \";\"\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: assignment_statement_"<<$$<<" [label=\"assignment_statement\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\";\"]\n";
+			$1=node_count;
+			std::cout<<"dot: assignment_statement_"<<$$<<" -> TERMINAL_"<<$1<<"\n";
+		}
 	|  l_expression '=' expression ';'
-		{std::cout<<"dot: assignment_statement -> {l_expression \"=\" expression \";\" }\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: assignment_statement_"<<$$<<" [label=\"assignment_statement\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"=\"]\n";
+			$2=node_count;
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\";\"]\n";
+			$4=node_count;
+			std::cout<<"dot: assignment_statement_"<<$$<<" -> {l_expression_"<<$1<<" TERMINAL_"<<$2<<" expression_"<<$3<<" TERMINAL_"<<$4<<" }\n";
+		}
 	;
 
 expression
 	: logical_and_expression
-		{std::cout<<"dot: expression -> logical_and_expression\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: expression_"<<$$<<" [label=\"expression\"]\n";
+			std::cout<<"dot: expression_"<<$$<<" -> logical_and_expression_"<<$1<<"\n";
+		}
 	| expression OR_OP logical_and_expression
-		{std::cout<<"dot: expression -> {expression OR_OP logical_and_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: expression_"<<$$<<" [label=\"expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"OR_OP\"]\n";
+			$2=node_count;
+			std::cout<<"dot: expression_"<<$$<<" -> {expression_"<<$1<<" TERMINAL_"<<$2<<" logical_and_expression_"<<$3<<"}\n";
+		}
 	;
 
 logical_and_expression
 	: equality_expression
-		{std::cout<<"dot: logical_and_expression -> equality_expression\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: logical_and_expression_"<<$$<<" [label=\"logical_and_expression\"]\n";
+			std::cout<<"dot: logical_and_expression_"<<$$<<" -> equality_expression_"<<$1<<"\n";
+		}
 	| logical_and_expression AND_OP equality_expression
-		{std::cout<<"dot: logical_and_expression -> {logical_and_expression AND_OP equality_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: logical_and_expression_"<<$$<<" [label=\"logical_and_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"AND_OP\"]\n";
+			$2=node_count;
+			std::cout<<"dot: logical_and_expression_"<<$$<<" -> {logical_and_expression_"<<$1<<" TERMINAL_"<<$2<<" equality_expression_"<<$2<<"}\n";
+		}
 	;
 
 equality_expression
 	: relational_expression
-		{std::cout<<"dot: equality_expression -> relational_expression\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: equality_expression_"<<$$<<" [label=\"equality_expression\"]\n";
+			std::cout<<"dot: equality_expression_"<<$$<<" -> relational_expression_"<<$1<<"\n";
+		}
 	| equality_expression EQ_OP relational_expression
-		{std::cout<<"dot: equality_expression -> {equality_expression EQ_OP relational_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: equality_expression_"<<$$<<" [label=\"equality_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"EQ_OP\"]\n";
+			$2=node_count;
+			std::cout<<"dot: equality_expression_"<<$$<<" -> {equality_expression_"<<$1<<" TERMINAL_"<<$2<<" relational_expression_"<<$3<<"}\n";
+		}
 	| equality_expression NE_OP relational_expression
-		{std::cout<<"dot: equality_expression -> {equality_expression NE_OP relational_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: equality_expression_"<<$$<<" [label=\"equality_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"NE_OP\"]\n";
+			$2=node_count;
+			std::cout<<"dot: equality_expression_"<<$$<<" -> {equality_expression_"<<$1<<" TERMINAL_"<<$2<<" relational_expression_"<<$3<<"}\n";
+		}
 	;
 	
+
 relational_expression
 	: additive_expression
-		{std::cout<<"dot: relational_expression -> additive_expression\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: relational_expression_"<<$$<<" [label=\"relational_expression\"]\n";
+			std::cout<<"dot: relational_expression_"<<$$<<" -> additive_expression_"<<$1<<"\n";
+		}
 	| relational_expression '<' additive_expression
-		{std::cout<<"dot: relational_expression -> {relational_expression \"<\" additive_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: relational_expression_"<<$$<<" [label=\"relational_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"<\"]\n";
+			$2=node_count;
+			std::cout<<"dot: relational_expression_"<<$$<<" -> {relational_expression_"<<$1<<" TERMINAL_"<<$2<<" additive_expression_"<<$3<<"}\n";
+		}
 	| relational_expression '>' additive_expression
-		{std::cout<<"dot: relational_expression -> {relational_expression \">\" additive_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: relational_expression_"<<$$<<" [label=\"relational_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\">\"]\n";
+			$2=node_count;
+			std::cout<<"dot: relational_expression_"<<$$<<" -> {relational_expression_"<<$1<<" TERMINAL_"<<$2<<" additive_expression_"<<$3<<"}\n";
+		}
 	| relational_expression LE_OP additive_expression
-		{std::cout<<"dot: relational_expression -> {relational_expression LE_OP additive_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: relational_expression_"<<$$<<" [label=\"relational_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"LE_OP\"]\n";
+			$2=node_count;
+			std::cout<<"dot: relational_expression_"<<$$<<" -> {relational_expression_"<<$1<<" TERMINAL_"<<$2<<" additive_expression_"<<$3<<"}\n";
+		}
 	| relational_expression GE_OP additive_expression
-		{std::cout<<"dot: relational_expression -> {relational_expression GE_OP additive_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: relational_expression_"<<$$<<" [label=\"relational_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"GE_OP\"]\n";
+			$2=node_count;
+			std::cout<<"dot: relational_expression_"<<$$<<" -> {relational_expression_"<<$1<<" TERMINAL_"<<$2<<" additive_expression_"<<$3<<"}\n";
+		}
 	;
+
 
 additive_expression
 	: multiplicative_expression
-		{std::cout<<"dot: additive_expression -> multiplicative_expression\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: additive_expression_"<<$$<<" [label=\"additive_expression\"]\n";
+			std::cout<<"dot: additive_expression_"<<$$<<" -> multiplicative_expression_"<<$1<<"\n";
+		}
 	| additive_expression '+' multiplicative_expression
-		{std::cout<<"dot: additive_expression -> {additive_expression \"+\" multiplicative_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: additive_expression_"<<$$<<" [label=\"additive_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"+\"]\n";
+			$2=node_count;
+			std::cout<<"dot: additive_expression_"<<$$<<" -> {additive_expression_"<<$1<<" TERMINAL_"<<$2<<" multiplicative_expression_"<<$3<<"}\n";
+		}
 	| additive_expression '-' multiplicative_expression
-		{std::cout<<"dot: additive_expression -> {additive_expression \"-\" multiplicative_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: additive_expression_"<<$$<<" [label=\"additive_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"-\"]\n";
+			$2=node_count;
+			std::cout<<"dot: additive_expression_"<<$$<<" -> {additive_expression_"<<$1<<" TERMINAL_"<<$2<<" multiplicative_expression_"<<$3<<"}\n";
+		}
 	;
 
 multiplicative_expression
 	: unary_expression
-		{std::cout<<"dot: multiplicative_expression -> unary_expression\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: multiplicative_expression_"<<$$<<" [label=\"multiplicative_expression\"]\n";
+			std::cout<<"dot: multiplicative_expression_"<<$$<<" -> unary_expression_"<<$1<<"\n";
+		}
 	| multiplicative_expression '*' unary_expression
-		{std::cout<<"dot: multiplicative_expression -> {multiplicative_expression \"*\" unary_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: multiplicative_expression_"<<$$<<" [label=\"multiplicative_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"*\"]\n";
+			$2=node_count;
+			std::cout<<"dot: multiplicative_expression_"<<$$<<" -> {multiplicative_expression_"<<$1<<" TERMINAL_"<<$2<<" unary_expression_"<<$3<<"}\n";
+		}
 	| multiplicative_expression '/' unary_expression
-		{std::cout<<"dot: multiplicative_expression -> {multiplicative_expression \"/\" unary_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: multiplicative_expression_"<<$$<<" [label=\"multiplicative_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<++node_count<<" [label=\"/\"]\n";
+			$2=node_count;
+			std::cout<<"dot: multiplicative_expression_"<<$$<<" -> {multiplicative_expression_"<<$1<<" TERMINAL_"<<$2<<" unary_expression_"<<$3<<"}\n";
+		}
 	;
-
+	
 unary_expression
 	: postfix_expression
-		{std::cout<<"dot: unary_expression -> postfix_expression\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: unary_expressio_"<<$$<<" [label=\"unary_expressio\"]\n";
+			std::cout<<"dot: unary_expression_"<<$$<<" -> postfix_expression_"<<$1<<"\n";
+		}
 	| unary_operator postfix_expression
-		{std::cout<<"dot: unary_expression -> {unary_operator postfix_expression}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: unary_expressio_"<<$$<<" [label=\"unary_expressio\"]\n";
+			std::cout<<"dot: unary_expression_"<<$$<<" -> {unary_operator_"<<$1<<" postfix_expression_"<<$2<<"}\n";
+		}
 	;
+	
+
 
 postfix_expression
 	: primary_expression
-		{std::cout<<"dot: postfix_expression -> primary_expression\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: postfix_expression_"<<$$<<" [label=\"postfix_expression\"]\n";
+			std::cout<<"dot: postfix_expression_"<<$$<<" -> primary_expression"<<$1<<"\n";
+		}
 	| IDENTIFIER '(' ')'
-		{std::cout<<"dot: postfix_expression -> {IDENTIFIER \"(\" \")\"}\n";}
+		{
+			$$=++node_count;
+			$1=++node_count;
+			$2=++node_count;
+			$3=++node_count;
+			std::cout<<"dot: postfix_expression_"<<$$<<" [label=\"postfix_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"IDENTIFIER\"]\n";
+			std::cout<<"dot: TERMINAL_"<<$2<<" [label=\"(\"]\n";
+			std::cout<<"dot: TERMINAL_"<<$3<<" [label=\")\"]\n";
+			std::cout<<"dot: postfix_expression_"<<$$<<" -> {TERMINAL_"<<$1<<" TERMINAL_"<<$2<<" TERMINAL_"<<$3<<"}\n";
+		}
 	| IDENTIFIER '(' expression_list ')'
-		{std::cout<<"dot: postfix_expression -> {IDENTIFIER \"(\" expression_list \")\"}\n";}
+		{
+			$$=++node_count;
+			$1=++node_count;
+			$2=++node_count;
+			$4=++node_count;
+			std::cout<<"dot: postfix_expression_"<<$$<<" [label=\"postfix_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"IDENTIFIER\"]\n";
+			std::cout<<"dot: TERMINAL_"<<$2<<" [label=\"(\"]\n";
+			std::cout<<"dot: TERMINAL_"<<$4<<" [label=\")\"]\n";
+			std::cout<<"dot: postfix_expression_"<<$$<<" -> {TERMINAL_"<<$1<<" TERMINAL_"<<$2<<" expression_list_"<<$3<<" TERMINAL_"<<$4<<"}\n";
+		}
 	| l_expression INC_OP
-		{std::cout<<"dot: postfix_expression -> {l_expression INC_OP}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: postfix_expression_"<<$$<<" [label=\"postfix_expression\"]\n";
+			$2=++node_count;
+			std::cout<<"dot: TERMINAL_"<<$2<<" [label=\"INC_OP\"]\n";
+			std::cout<<"dot: postfix_expression_"<<$$<<" -> {l_expression_"<<$1<<" TERMINAL_"<<$2<<"}\n";
+		}
 	| l_expression DEC_OP
-		{std::cout<<"dot: postfix_expression -> {l_expression DEC_OP}\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: postfix_expression_"<<$$<<" [label=\"postfix_expression\"]\n";
+			$2=++node_count;
+			std::cout<<"dot: TERMINAL_"<<$2<<" [label=\"DEC_OP\"]\n";
+			std::cout<<"dot: postfix_expression_"<<$$<<" -> {l_expression_"<<$1<<" TERMINAL_"<<$2<<"}\n";
+		}
 	;
+
 
 primary_expression
 	: l_expression
-		{std::cout<<"dot: primary_expression -> l_expression\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: primary_expression_"<<$$<<" [label=\"primary_expression\"]\n";
+			std::cout<<"dot: primary_expression_"<<$$<<" -> l_expression_"<<$1<<"\n";
+		}
 	| INT_CONSTANT
-		{std::cout<<"dot: primary_expression -> INT_CONSTANT\n";}
+		{
+			$$=++node_count;
+			$1=++node_count;
+			std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"INT_CONSTANT\"]\n";
+			std::cout<<"dot: primary_expression_"<<$$<<" -> TERMINAL_"<<$1<<"\n";
+		}
 	| FLOAT_CONSTANT
-		{std::cout<<"dot: primary_expression -> FLOAT_CONSTANT\n";}
+		{
+			$$=++node_count;
+			$1=++node_count;
+			std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"FLOAT_CONSTANT\"]\n";
+			std::cout<<"dot: primary_expression_"<<$$<<" -> TERMINAL_"<<$1<<"\n";
+		}
 	| STRING_LITERAL
-		{std::cout<<"dot: primary_expression -> STRING_LITERAL\n";}
+		{
+			$$=++node_count;
+			$1=++node_count;
+			std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"STRING_LITERAL\"]\n";
+			std::cout<<"dot: primary_expression_"<<$$<<" -> TERMINAL_"<<$1<<"\n";
+		}
 	| '(' expression ')'
-		{std::cout<<"dot: primary_expression -> { \"(\" expression \")\" }\n";}
+		{
+			$$=++node_count;
+			$1=++node_count;
+			$3=++node_count;
+			std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"(\"]\n";
+			std::cout<<"dot: TERMINAL_"<<$3<<" [label=\")\"]\n";
+			std::cout<<"dot: primary_expression_"<<$$<<" -> { TERMINAL_"<<$1<<" expression_"<<$2<<" TERMINAL_"<<$3<<" }\n";
+		}
 	;
 
 l_expression
 	: IDENTIFIER
-		{std::cout<<"dot: l_expression -> IDENTIFIER\n";}
+		{
+			$$=++node_count;
+			$1=++node_count;
+			std::cout<<"dot: l_expression_"<<$$<<" [label=\"l_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"IDENTIFIER\"]\n";
+			std::cout<<"dot: l_expression_"<<$$<<" -> TERMINAL_"<<$1<<"\n";
+		}
 	| l_expression '[' expression ']' 
-		{std::cout<<"dot: l_expression -> { l_expression \"[\" expression \"]\" }\n";}
+		{
+			$$=++node_count;
+			$2=++node_count;
+			$4=++node_count;
+			std::cout<<"dot: l_expression_"<<$$<<" [label=\"l_expression\"]\n";
+			std::cout<<"dot: TERMINAL_"<<$2<<" [label=\"[\"]\n";
+			std::cout<<"dot: TERMINAL_"<<$4<<" [label=\"]\"]\n";
+			std::cout<<"dot: l_expression_"<<$$<<" { l_expression_"<<$1<<" TERMINAL_"<<$2<<" expression_"<<$3<<" TERMINAL_"<<$4<<" }-> \n";
+		}
 	;
 	
 expression_list
 	: expression
-		{std::cout<<"dot: expression_list -> expression\n";}
+		{
+			$$=++node_count;
+			std::cout<<"dot: expression_list_"<<$$<<" [label=\"expression_list\"]\n";
+			std::cout<<"dot: expression_list_"<<$$<<" -> expression_"<<$1<<"\n";
+		}
 	| expression_list ',' expression
-		{std::cout<<"dot: expression_list -> { expression_list \",\" expression }\n";}
+		{
+			$$=++node_count;
+			$2=++node_count;
+			std::cout<<"dot: expression_list_"<<$$<<" [label=\"expression_list\"]\n";
+			std::cout<<"dot: TERMINAL_"<<$2<<" [label=\",\"]\n";
+			std::cout<<"dot: expression_list_"<<$$<<" -> {expression_list_"<<$1<<" TERMINAL_"<<$2<<" expression_"<<$3<<" }\n";
+		}
 	;
 	
 unary_operator
 	: '-'
-		{std::cout<<"dot: unary_operator -> \"-\"\n";}
+		{
+		    $$=++node_count;
+		    $1=++node_count;
+		    std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"-\"]\n";
+		    std::cout<<"dot: unary_operator_"<<$$<<" -> TERMINAL_"<<$1<<"\n";
+		}
 	| '!'
-		{std::cout<<"dot: unary_operator -> \"!\"\n";}
+		{
+		    $$=++node_count;
+		    $1=++node_count;
+		    std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"!\"]\n";
+		    std::cout<<"dot: unary_operator_"<<$$<<" -> TERMINAL_"<<$1<<"\n";
+		}
 	;
 
 selection_statement
 	: IF '(' expression ')' statement ELSE statement
-		{std::cout<<"dot: selection_statement -> { IF \"(\" expression \")\" statement ELSE statement }\n";}
+		{
+		    $$=++node_count;
+		    $1=++node_count;
+		    $2=++node_count;
+		    $4=++node_count;
+		    $6=++node_count;
+		    std::cout<<"dot: selection_statement_"<<$$<<" [label=\"selection_statement\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"IF\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$2<<" [label=\"(\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$4<<" [label=\")\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$6<<" [label=\"ELSE\"]\n";
+		    
+		    std::cout<<"dot: selection_statement_"<<$$<<" -> { TERMINAL_"<<$1<<" TERMINAL_"<<$2<<" expression_"<<$3<<" TERMINAL_"<<$4<<" statement_"<<$5<<" TERMINAL_"<<$6<<" statement_"<<$7<<"}\n";
+	    }
 	;
 
 iteration_statement
 	: WHILE '(' expression ')' statement
-		{std::cout<<"dot: iteration_statement -> { WHILE \"(\" expression \")\" statement }\n";}
+		{
+		    $$=++node_count;
+		    $1=++node_count;
+		    $2=++node_count;
+		    $4=++node_count;
+		    std::cout<<"dot: iteration_statement_"<<$$<<" [label=\"iteration_statement\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"WHILE\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$2<<" [label=\"(\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$4<<" [label=\")\"]\n";
+		    
+		    std::cout<<"dot: iteration_statement_"<<$$<<" -> { TERMINAL_"<<$1<<" TERMINAL_"<<$2<<" expression_"<<$3<<" TERMINAL_"<<$4<<" statement_"<<$5<<"}\n";
+	    }
 	| FOR '(' assignment_statement expression ';' assignment_statement ')' statement
-		{std::cout<<"dot: iteration_statement -> { FOR \"(\" assignment_statement expression \";\" assignment_statement \")\" statement }\n";}
+		{
+		    $$=++node_count;
+		    $1=++node_count;
+		    $2=++node_count;
+		    $5=++node_count;
+		    $7=++node_count;
+		    std::cout<<"dot: iteration_statement_"<<$$<<" [label=\"iteration_statement\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"FOR\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$2<<" [label=\"(\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$5<<" [label=\";\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$7<<" [label=\")\"]\n";
+		    
+		    std::cout<<"dot: iteration_statement_"<<$$<<" -> { TERMINAL_"<<$1<<" TERMINAL_"<<$2
+		    <<" assignment_statement_"<<$3<<" expression_"<<$4<<" TERMINAL_"<<$5
+		    <<" assignment_statement_"<<$6<<" TERMINAL_"<<$7<<" statement_"<<$8<<"}\n";
 	;
 
 declaration_list
 	: declaration
-		{std::cout<<"dot: declaration_list -> declaration\n";}
+		{
+		    $$=++node_count;
+		    std::cout<<"dot: declaration_list_"<<$$<<" [label=\"declaration_list\"]\n";
+		    
+		    std::cout<<"dot: declaration_list_"<<$$<<" -> declaration_"<<$1<<"\n";
+	    }
 	| declaration_list declaration
-		{std::cout<<"dot: declaration_list -> { declaration_list declaration }\n";}
+		{
+		    $$=++node_count;
+		    std::cout<<"dot: declaration_list_"<<$$<<" [label=\"declaration_list\"]\n";
+		    
+		    std::cout<<"dot: declaration_list_"<<$$<<" -> { declaration_list_"<<$1<<" declaration_"<<$2<<"}\n";
+		}
 	;
 
 declaration
 	: type_specifier declarator_list ';'
-		{std::cout<<"dot: declaration -> { type_specifier declarator_list \";\" }\n";}
+		{
+		    $$=++node_count;
+		    $3=++node_count;
+		    std::cout<<"dot: declaration_"<<$$<<" [label=\"declarator_list\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$3<<" [label=\";\"]\n";
+		    
+		    std::cout<<"dot: declaration_"<<$$<<" -> { type_specifier_"<<$1<<" declarator_list_"<<$2<<" TERMINAL_"<<$3<<"}\n";
+	    }
 	;
 
 declarator_list
 	: declarator
-		{std::cout<<"dot: declarator_list -> declarator\n";}
+		{
+		    $$=++node_count;
+		    std::cout<<"dot: declarator_list_"<<$$<<" [label=\"declarator_list\"]\n";
+		    
+		    std::cout<<"dot: declarator_list_"<<$$<<" -> declarator_"<<$1<<"\n";
+		}
 	| declarator_list ',' declarator
-		{std::cout<<"dot: declarator_list -> { declarator_list \",\" declarator }\n";}
+		{
+		    $$=++node_count;
+		    $2=++node_count;
+		    std::cout<<"dot: declarator_list_"<<$$<<" [label=\"declarator_list\"]\n";
+		    std::cout<<"dot: TERMINAL_"<<$2<<" [label=\",\"]\n";
+		    
+		    std::cout<<"dot: declarator_list_"<<$$<<" -> { declarator_list_"<<$1<<" TERMINAL_"<<$2<<" declarator_"<<$3<<"}\n";
+	    }
 	;
