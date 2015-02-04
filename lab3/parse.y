@@ -59,7 +59,7 @@ type_specifier
 			std::cout<<"dot: TERMINAL_"<<$1<<" [label=\"INT\"]\n";
 
 			std::cout<<"dot: type_specifier_"<<$$<<" -> TERMINAL_"<<$1<<"\n";
-			std::cout<<"token_printing "<<endl;
+			std::cout<<"token_printing "<<std::endl;
 		}
 	| FLOAT
 		{
