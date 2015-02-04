@@ -16,28 +16,33 @@ struct typeExp
 class abstract_astnode
 {
 	public:
+		vector<abstract_astnode*> children;
 		virtual void print () = 0;
-		virtual std::string generate_code(const symbolTable&) = 0;
-		virtual basic_types getType() = 0;
-		virtual bool checkTypeofAST() = 0;
+		//virtual std::string generate_code(const symbolTable&) = 0;
+		//virtual basic_types getType() = 0;
+		//virtual bool checkTypeofAST() = 0;
 	protected:
-		virtual void setType(basic_types) = 0;
-	private:
+		//virtual void setType(basic_types) = 0;
 		typeExp astnode_type;
+	private:
+		
 };
 
 class stmtAst : public abstract_astnode{
 	public:
-		vector<abstract_astnode*> v;
+		void print(){};
+
 };
 
 class expAst : public abstract_astnode{
 	public:
-		vector<abstract_astnode*> v;
 
 };
 
 class arrayRef : public abstract_astnode{
 	public:
-		vector<abstract_astnode*> v;
 };
+
+
+vector<abstract_astnode*> node_pointers;
+int node_count=0;
