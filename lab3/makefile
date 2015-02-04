@@ -2,9 +2,6 @@ all:    clean lex.cc parse.cc main.cc Scanner.h Scannerbase.h Scanner.ih Parser.
 	g++   --std=c++0x lex.cc parse.cc main.cc;
 	./a.out < test-cpp > junk;
 	egrep 'nextToken|reduce' junk
-	egrep 'dot' junk | python process_dot.py  > graph1.gv
-	dot -Tps graph1.gv -o graph1.ps
-	#gnome-open graph1.ps
         
 graph:
 	dot -Tps graph1.gv -o graph1.ps
