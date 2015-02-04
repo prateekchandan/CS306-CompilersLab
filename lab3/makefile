@@ -11,7 +11,7 @@ graph:
 	gnome-open graph1.ps
 	
 lex.cc: lex.l Scanner.ih 
-	./cond_remove_scannerih; 
+	@rm -rf Scanner*
 	flexc++ lex.l; 
 	sed -i '/include/a #include "Parserbase.h"' Scanner.ih; 
 
