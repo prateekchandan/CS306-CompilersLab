@@ -2,6 +2,29 @@
 #include <vector>
 using namespace std;
 
+// Some global variable to hold map of ENUM_TYPES to Strings
+enum OP_TYPES{
+	OR = 0,
+	AND = 1,
+	EQ_OP = 2,
+	NE_OP = 3,
+	LT = 4,
+	LE_OP = 5,
+	GT = 6,
+	GE_OP = 7,
+	PLUS = 8,
+	MINUS = 9,
+	MULT = 10,
+	ASSIGN = 11,
+	UMINUS = 12,
+	NOT = 13,
+	PP = 14
+};
+
+string operator_types[] = {"OR" , "AND" , "EQ_OP" , "NE_OP" , "LT" , 
+	"LE_OP" , "GT" , "GE_OP" , "PLUS" , "MINUS" ,"MULT" , "ASSIGN",
+	"UMINUS" , "NOT" , "INC_OP"} ;
+
 // Abstract class for a node in the AST //
 
 class abstract_astnode {
