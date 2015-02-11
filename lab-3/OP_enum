@@ -1,0 +1,15 @@
+enum OP_TYPES{
+	OR = 0,
+	AND = 1,
+	EQ_OP = 2,
+	NE_OP = 3,
+	LT = 4,
+	LE_OP = 5,
+	GT = 6,
+	GE_OP = 7,
+	PLUS = 8,
+	MINUS = 9,
+	MULT = 10,
+	ASSIGN = 11
+};
+string operator_types[] = {"||" , "&&" , "==" , "!=" , "<" , "<=" , ">" , ">=" , "+" , "-" ,"*" , "="} 
