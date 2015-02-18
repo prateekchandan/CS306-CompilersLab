@@ -3,9 +3,9 @@
 using namespace std;
 
 // Some global variable to hold map of ENUM_TYPES to Strings
-enum OP_TYPES{
-	OR = 0,
-	AND = 1,
+enum OP_TYPE{
+	OR_OP = 0,
+	AND_OP = 1,
 	EQ_OP = 2,
 	NE_OP = 3,
 	LT = 4,
@@ -15,21 +15,19 @@ enum OP_TYPES{
 	PLUS = 8,
 	MINUS = 9,
 	MULT = 10,
-	ASSIGN = 11,
+	ASSIGN = 11
+};
+
+enum UNOP_TYPE{
 	UMINUS = 12,
 	NOT = 13,
 	PP = 14
 };
 
-string operator_types[] = {"OR" , "AND" , "EQ_OP" , "NE_OP" , "LT" , 
-	"LE_OP" , "GT" , "GE_OP" , "PLUS" , "MINUS" ,"MULT" , "ASSIGN",
-	"UMINUS" , "NOT" , "INC_OP"} ;
-
-// Abstract class for a node in the AST //
-
+// Abstract class for a node in the AST /////////////////////////////////////
 class abstract_astnode {
 	public:
-	virtual void print () = 0;
+	//virtual void print () = 0;
 	//virtual std::string generate_code(const symbolTable&) = 0;
 	//virtual basic_types getType() = 0;
 	//virtual bool checkTypeofAST() = 0;
@@ -47,23 +45,21 @@ class abstract_astnode {
 class StmtAst : public abstract_astnode {
 };
 
-class BlockAst : public abstract_astnode {
-	protected:
-	vector<StmtAst*> statements;
-	
-	public:
-	BlockAst() {}
-	void add_statement(StmtAst *e){
-		statements.push_back(e);
-	}
-};
-
 class ExpAst : public abstract_astnode {
 };
 
 /////////////////////////////////////////////////////////////////////////////
 
 // Child classes of StmtAst class //
+
+class BlockAst : public StmtAst {
+	protected:
+	vector<StmtAst*> statements;
+	
+	public:
+	BlockAst() {}
+	void add_statement(StmtAst *e);
+};
 
 class Ass : public StmtAst {
 	
@@ -166,25 +162,41 @@ class UnOp : public ExpAst {
 	
 	public:
 	UnOp() {}
+	UnOp(int o) {
+		op_type = o;
+	}
 	UnOp(int o, ExpAst *e) {
 		op_type = o;
 		exp = e;
+	}
+	void set_expression(ExpAst *e);
+};
+
+class Identifier : public ExpAst {
+	
+	protected:
+	string id;
+	
+	public:
+	Identifier() {}
+	Identifier(string s){
+		id = s;
 	}
 };
 
 class FunCall : public ExpAst {
 	
 	protected:
+	Identifier *name;
 	vector<ExpAst*> expression_list;
 	
 	public:
 	FunCall() {}
-	FunCall(vector<ExpAst*> &list){
-		expression_list = list;
+	FunCall(Identifier *i){
+		name = i;
 	}
-	void add_expression(ExpAst *e){
-		expression_list.push_back(e);
-	}
+	void set_name(Identifier *i);
+	void add_expression(ExpAst *e);
 };
 
 class FloatConst : public ExpAst {
@@ -223,18 +235,6 @@ class StringConst : public ExpAst {
 	}
 };
 
-class Identifier : public ExpAst {
-	
-	protected:
-	string id;
-	
-	public:
-	Identifier() {}
-	Identifier(string s){
-		id = s;
-	}
-};
-
 class ArrayRef : public ExpAst {
 	
 	protected:
@@ -247,7 +247,5 @@ class ArrayRef : public ExpAst {
 		id = s;
 		indices = i;
 	}
-	void add_index(ExpAst *e){
-		indices.push_back(e);
-	}
+	void add_index(ExpAst *e);
 };

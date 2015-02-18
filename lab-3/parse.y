@@ -1,57 +1,44 @@
-/* Changes:  */
-
-/* 1. Character constants removed */
-/* 2. Changed INTCONSTANT to INT_CONSTANT */
-/* 3. Changed the production for constant_expression to include FLOAT_CONSTANT */
-/* 4. Added examples of FLOAT_CONSTANTS */
-/* 5. Added the description of STRING_LITERAL */
-/* 6. Changed primary_expression and FOR */
-/* 7. The grammar permits a empty statement. This should be  */
-/*    explicitly represented in the AST. */
-/* 8. To avoid local decl inside blocks, a rule for statement  */
-/*    has been changed. */
-
-/* ----------------------------------------------------------------------- */
-
-/* start symbol is translation_unit */
-
-/* ---------------------------------------------------- */
+%debug
 %scanner Scanner.h
 %scanner-token-function d_scanner.lex()
 
+%token VOID INT FLOAT FLOAT_CONSTANT INT_CONSTANT AND_OP OR_OP
+%token EQ_OP NE_OP LE_OP GE_OP STRING_LITERAL IF ELSE WHILE FOR RETURN IDENTIFIER INC_OP
 
-%token VOID INT FLOAT FLOAT_CONSTANT INT_CONSTANT AND_OP OR_OP EQ_OP NE_OP LE_OP GE_OP STRING_LITERAL IF ELSE WHILE FOR RETURN IDENTIFIER INC_OP
+%polymorphic eAst : ExpAst* ; sAst : StmtAst*; Int : int; Float : float; String : string;
 
-%union {
-  StmtAst *stmtast;
-  ExpAst *expast;
-  Arrayref *arrayref;
-  float f;
-  int i;
-  string s;
-}
-
+%type <eAst> expression logical_and_expression equality_expression relational_expression additive_expression multiplicative_expression unary_expression postfix_expression primary_expression l_expression constant_expression expression_list unary_operator
+%type <sAst> selection_statement iteration_statement assignment_statement translation_unit function_definition compound_statement statement statement_list
+%type <Int> INT_CONSTANT
+%type <Float> FLOAT_CONSTANT
+%type <String> STRING_LITERAL IDENTIFIER
 
 %%
 
 translation_unit
 	: function_definition 
-	| translation_unit function_definition 
-        ;
+	{
+		$<sAst>$ = $<sAst>1 ;
+	}
+	| translation_unit function_definition
+	;
 
 function_definition
-	: type_specifier fun_declarator compound_statement 
+	: type_specifier fun_declarator compound_statement
+	{
+		$<sAst>$ = $<sAst>3 ;
+	}
 	;
 
 type_specifier
 	: VOID 	
-        | INT   
+	| INT   
 	| FLOAT 
-        ;
+	;
 
 fun_declarator
-	: IDENTIFIER '(' parameter_list ')' 
-        | IDENTIFIER '(' ')' 
+	: IDENTIFIER '(' parameter_list ')'
+	| IDENTIFIER '(' ')' 
 	;
 
 parameter_list
@@ -61,122 +48,288 @@ parameter_list
 
 parameter_declaration
 	: type_specifier declarator 
-        ;
+	;
 
 declarator
 	: IDENTIFIER 
 	| declarator '[' constant_expression ']' 
-        ;
+	;
 
 constant_expression 
-        : INT_CONSTANT 
-        | FLOAT_CONSTANT 
-        ;
+	: INT_CONSTANT 
+	{
+		$<eAst>$ = new IntConst($<Int>1);
+	}
+	| FLOAT_CONSTANT
+	{
+		$<eAst>$ = new FloatConst($<Float>1);
+	}
+	;
 
 compound_statement
 	: '{' '}' 
+	{
+		$<sAst>$ = new BlockAst();
+	}
 	| '{' statement_list '}' 
-        | '{' declaration_list statement_list '}' 
+	{
+		$<sAst>$ = $<sAst>2;
+	}
+	| '{' declaration_list statement_list '}'
+	{
+		$<sAst>$ = $<sAst>3;
+	}
 	;
 
 statement_list
-	: statement		
-        | statement_list statement	
+	: statement
+	{
+		$<sAst>$ = new BlockAst();
+		((BlockAst*)$<sAst>$)->add_statement($<sAst>1);
+	}		
+	| statement_list statement
+	{
+		$<sAst>$ = $<sAst>1;
+		((BlockAst*)$<sAst>$)->add_statement($<sAst>2);
+	}
 	;
 
 statement
-        : '{' statement_list '}'  //a solution to the local decl problem
-        | selection_statement 	
-        | iteration_statement 	
-	| assignment_statement	
-        | RETURN expression ';'	
-        ;
+	: '{' statement_list '}'
+	{
+		$<sAst>$ = $<sAst>2;
+	}
+	| selection_statement
+	{
+		$<sAst>$ = $<sAst>1;
+	}
+	| iteration_statement
+	{
+		$<sAst>$ = $<sAst>1;
+	}
+	| assignment_statement
+	{
+		$<sAst>$ = $<sAst>1;
+	}
+	| RETURN expression ';'
+	{
+		$<sAst>$ = new ReturnSt($<eAst>2);
+	}
+	;
 
 assignment_statement
-	: ';' 								
-	|  l_expression '=' expression ';'	
+	: ';'
+	{
+		$<sAst>$ = new Ass(NULL, NULL);
+	}								
+	|  l_expression '=' expression ';'
+	{
+		$<sAst>$ = new Ass($<eAst>1, $<eAst>3);
+	}
 	;
 
 expression
-        : logical_and_expression 
-        | expression OR_OP logical_and_expression
+	: logical_and_expression
+	{
+		$<eAst>$ = $<eAst>1;
+	}
+	| expression OR_OP logical_and_expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::OR_OP, $<eAst>1, $<eAst>3);
+	}
 	;
 
 logical_and_expression
-        : equality_expression
-        | logical_and_expression AND_OP equality_expression 
+	: equality_expression
+	{
+		$<eAst>$ = $<eAst>1;
+	}
+	| logical_and_expression AND_OP equality_expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::AND_OP, $<eAst>1, $<eAst>3);
+	}
 	;
 
 equality_expression
-	: relational_expression 
-        | equality_expression EQ_OP relational_expression 	
+	: relational_expression
+	{
+		$<eAst>$ = $<eAst>1;
+	} 
+	| equality_expression EQ_OP relational_expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::EQ_OP, $<eAst>1, $<eAst>3);
+	}
 	| equality_expression NE_OP relational_expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::NE_OP, $<eAst>1, $<eAst>3);
+	}
 	;
+	
 relational_expression
 	: additive_expression
-        | relational_expression '<' additive_expression 
-	| relational_expression '>' additive_expression 
-	| relational_expression LE_OP additive_expression 
-        | relational_expression GE_OP additive_expression 
+	{
+		$<eAst>$ = $<eAst>1;
+	}
+	| relational_expression '<' additive_expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::LT, $<eAst>1, $<eAst>3);
+	}
+	| relational_expression '>' additive_expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::GT, $<eAst>1, $<eAst>3);
+	}
+	| relational_expression LE_OP additive_expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::LE_OP, $<eAst>1, $<eAst>3);
+	}
+	| relational_expression GE_OP additive_expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::GE_OP, $<eAst>1, $<eAst>3);
+	}
 	;
 
 additive_expression 
 	: multiplicative_expression
-	| additive_expression '+' multiplicative_expression 
-	| additive_expression '-' multiplicative_expression 
+	{
+		$<eAst>$ = $<eAst>1;
+	}
+	| additive_expression '+' multiplicative_expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::PLUS, $<eAst>1, $<eAst>3);
+	}
+	| additive_expression '-' multiplicative_expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::MINUS, $<eAst>1, $<eAst>3);
+	}
 	;
 
 multiplicative_expression
 	: unary_expression
-	| multiplicative_expression '*' unary_expression 
-	| multiplicative_expression '/' unary_expression 
+	{
+		$<eAst>$ = $<eAst>1;
+	}
+	| multiplicative_expression '*' unary_expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::MULT, $<eAst>1, $<eAst>3);
+	}
+	| multiplicative_expression '/' unary_expression
 	;
+	
 unary_expression
-	: postfix_expression  				
-	| unary_operator postfix_expression 
+	: postfix_expression
+	{
+		$<eAst>$ = $<eAst>1;
+	}
+	| unary_operator postfix_expression
+	{
+		((UnOp*)$<eAst>1)->set_expression($<eAst>2);
+		$<eAst>$ = $<eAst>1;
+	}
 	;
 
 postfix_expression
 	: primary_expression
+	{
+		$<eAst>$ = $<eAst>1;
+	}
     | IDENTIFIER '(' ')'
-	| IDENTIFIER '(' expression_list ')' 
+    {
+		$<eAst>$ = new FunCall((Identifier*)$<eAst>1);
+	}
+	| IDENTIFIER '(' expression_list ')'
+	{
+		$<eAst>$ = $<eAst>3;
+		((FunCall*)$<eAst>$)->set_name(new Identifier($1));
+	}
 	| l_expression INC_OP
+	{
+		$<eAst>$ = new UnOp(UNOP_TYPE::PP, $<eAst>1);
+	}
 	;
 
 primary_expression
 	: l_expression
-        | l_expression '=' expression // added this production
+	{
+		$<eAst>$ = $<eAst>1;
+	}
+	| l_expression '=' expression
+	{
+		$<eAst>$ = new Op(OP_TYPE::ASSIGN, $<eAst>1, $<eAst>3);
+	}
 	| INT_CONSTANT
+	{
+		$<eAst>$ = new IntConst($<Int>1);
+	}
 	| FLOAT_CONSTANT
-        | STRING_LITERAL
-	| '(' expression ')' 	
+	{
+		$<eAst>$ = new FloatConst($<Float>1);
+	}
+	| STRING_LITERAL
+	{
+		$<eAst>$ = new StringConst($<String>1);
+	}
+	| '(' expression ')'
+	{
+		$<eAst>$ = $2;
+	}
 	;
 
 l_expression
-        : IDENTIFIER
-        | l_expression '[' expression ']' 	
-        ;
+	: IDENTIFIER
+	{
+		$<eAst>$ = new Identifier($<String>1);
+	}
+	| l_expression '[' expression ']'
+	{
+		//$<eAst>$ = new Index((ArrayRef*)$<eAst>1, $<eAst>3);
+	}
+	;
+        
 expression_list
-        : expression
-        | expression_list ',' expression
-        ;
+	: expression
+	{
+		$<eAst>$ = new FunCall();
+		((FunCall*)$<eAst>$)->add_expression($<eAst>1);
+	}
+	| expression_list ',' expression
+	{
+		$<eAst>$ = $<eAst>1;
+		((FunCall*)$<eAst>$)->add_expression($<eAst>3);
+	}
+	;
+        
 unary_operator
-        : '-'	
-	| '!' 	
+	: '-'
+	{
+		$<eAst>$ = new UnOp(UNOP_TYPE::UMINUS);
+	}
+	| '!'
+	{
+		$<eAst>$ = new UnOp(UNOP_TYPE::NOT);
+	}
 	;
 
 selection_statement
-        : IF '(' expression ')' statement ELSE statement 
+	: IF '(' expression ')' statement ELSE statement
+	{
+		$<sAst>$ = new If($<eAst>3, $<sAst>5, $<sAst>7);
+	}
 	;
 
 iteration_statement
-	: WHILE '(' expression ')' statement 	
-        | FOR '(' expression ';' expression ';' expression ')' statement  //modified this production
-        ;
+	: WHILE '(' expression ')' statement
+	{
+		$<sAst>$ = new While($<eAst>1, $<sAst>5);
+	}	
+	| FOR '(' expression ';' expression ';' expression ')' statement
+	{
+		$<sAst>$ = new For($<eAst>3, $<eAst>5, $<eAst>7, $<sAst>9);
+	}
+	;
 
 declaration_list
-        : declaration  					
-        | declaration_list declaration
+	: declaration  					
+	| declaration_list declaration
 	;
 
 declaration
@@ -187,55 +340,3 @@ declarator_list
 	: declarator
 	| declarator_list ',' declarator 
 	;
-
-
-/* A description of integer and float constants. Not part of the grammar.   */
-
-/* Numeric constants are defined as:  */
-
-/* C-constant: */
-/*   C-integer-constant */
-/*   floating-point-constant */
- 
-/* C-integer-constant: */
-/*   [1-9][0-9]* */
-/*   0[bB][01]* */
-/*   0[0-7]* */
-/*   0[xX][0-9a-fA-F]* */
- 
-/* floating-point-constant: */
-/*   integer-part.[fractional-part ][exponent-part ] */
-
-/* integer-part: */
-/*   [0-9]* */
- 
-/* fractional-part: */
-/*   [0-9]* */
- 
-/* exponent-part: */
-/*   [eE][+-][0-9]* */
-/*   [eE][0-9]* */
-
-/* The rule given above is not entirely accurate. Correct it on the basis of the following examples: */
-
-/* 1. */
-/* 23.1 */
-/* 01.456 */
-/* 12.e45 */
-/* 12.45e12 */
-/* 12.45e-12 */
-/* 12.45e+12 */
-
-/* The following are not examples of FLOAT_CONSTANTs: */
-
-/* 234 */
-/* . */
-
-/* We have not yet defined STRING_LITERALs. For our purpose, these are */
-/* sequence of characters enclosed within a pair of ". If the enclosed */
-/* sequence contains \ and ", they must be preceded with a \. Apart from */
-/* \and ", the only other character that can follow a \ within a string */
-/* are t and n.  */
-
-
-

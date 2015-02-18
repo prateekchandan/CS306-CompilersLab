@@ -1,0 +1,15 @@
+#!/bin/sh
+
+sed -i '/include/a #include "Parserbase.h"' Scanner.ih;
+sed -i '/insert preincludes/a #include "classes.h"' Parserbase.h;
+sed -i '/include "Parser.h"/a #include "classes.cc"' Parser.ih;
+
+sed -i '\|STYPE__     d_val__;| d 
+' Parserbase.h
+
+sed -i '\|typedef Meta__::SType STYPE__;| a \\tpublic: static STYPE__  d_val__;
+' Parserbase.h 
+
+sed -i '\|void Parser::print__()| i Meta__::SType ParserBase::d_val__;
+' parse.cc
+
