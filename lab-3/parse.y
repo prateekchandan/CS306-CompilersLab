@@ -282,19 +282,21 @@ primary_expression
 l_expression
 	: IDENTIFIER
 	{
-		seen_identifier = true;
 		$$ = new Identifier($1);
+		identifiers.insert((ExpAst*)$$);
 	}
 	| l_expression '[' expression ']'
 	{
-		if(seen_identifier){
+		if(identifiers.find((ExpAst*)$1)!=identifiers.end()){
+			// We are at base case
 			$$ = new ArrayRef((Identifier*)$1);
-			seen_identifier = false;
+			((ArrayRef*)$$)->add_index($3);
 		}
 		else{
+			// We are recursive step
 			$$ = new ArrayRef((ArrayRef*)$1);
+			((ArrayRef*)$$)->add_index($3);
 		}
-		((ArrayRef*)$$)->add_index($3);
 	}
 	;
         

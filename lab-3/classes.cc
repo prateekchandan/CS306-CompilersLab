@@ -1,3 +1,4 @@
+set<ExpAst*> identifiers;
 bool seen_identifier = false;
 
 string operator_map[] = {"OR" , "AND" , "EQ_OP" , "NE_OP" , "LT" , 
