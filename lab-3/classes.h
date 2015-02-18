@@ -2,7 +2,7 @@
 #include <vector>
 using namespace std;
 
-// Some global variable to hold map of ENUM_TYPES to Strings
+// Some enum types for operators
 enum OP_TYPE{
 	OR_OP = 0,
 	AND_OP = 1,
@@ -15,26 +15,27 @@ enum OP_TYPE{
 	PLUS = 8,
 	MINUS = 9,
 	MULT = 10,
-	ASSIGN = 11
+	DIV = 11,
+	ASSIGN = 12
 };
 
 enum UNOP_TYPE{
-	UMINUS = 12,
-	NOT = 13,
-	PP = 14
+	UMINUS = 13,
+	NOT = 14,
+	PP = 15
 };
 
 // Abstract class for a node in the AST /////////////////////////////////////
 class abstract_astnode {
 	public:
-	//virtual void print () = 0;
+	virtual void print () = 0;
 	//virtual std::string generate_code(const symbolTable&) = 0;
 	//virtual basic_types getType() = 0;
 	//virtual bool checkTypeofAST() = 0;
-	
+
 	protected:
 	//virtual void setType(basic_types) = 0;
-	
+
 	private:
 	//typeExp astnode_type;
 };
@@ -43,9 +44,13 @@ class abstract_astnode {
 // These are the high-level classes inherited from the abstract node class //
 
 class StmtAst : public abstract_astnode {
+	public:
+	virtual void print () = 0;
 };
 
 class ExpAst : public abstract_astnode {
+	public:
+	virtual void print () = 0;
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -58,6 +63,7 @@ class BlockAst : public StmtAst {
 	
 	public:
 	BlockAst() {}
+	void print();
 	void add_statement(StmtAst *e);
 };
 
@@ -73,6 +79,7 @@ class Ass : public StmtAst {
 		left = l;
 		right = r;
 	}
+	void print();
 };
 	
 class ReturnSt : public StmtAst {
@@ -85,6 +92,7 @@ class ReturnSt : public StmtAst {
 	ReturnSt(ExpAst *r) {
 		exp = r;
 	}
+	void print();
 };
 
 class If : public StmtAst {
@@ -101,6 +109,7 @@ class If : public StmtAst {
 		statement1 = s1;
 		statement2 = s2;
 	}
+	void print();
 };
 
 class While : public StmtAst {
@@ -115,6 +124,7 @@ class While : public StmtAst {
 		cond = c;
 		statement = s;
 	}
+	void print();
 };
 
 class For : public StmtAst {
@@ -133,6 +143,7 @@ class For : public StmtAst {
 		step = s;
 		statement = st;
 	}
+	void print();
 };
 /////////////////////////////////////////////////////////////////////////////
 
@@ -152,6 +163,7 @@ class Op : public ExpAst {
 		left = l;
 		right = r;
 	}
+	void print();
 };
 
 class UnOp : public ExpAst {
@@ -170,6 +182,7 @@ class UnOp : public ExpAst {
 		exp = e;
 	}
 	void set_expression(ExpAst *e);
+	void print();
 };
 
 class Identifier : public ExpAst {
@@ -182,6 +195,7 @@ class Identifier : public ExpAst {
 	Identifier(string s){
 		id = s;
 	}
+	void print();
 };
 
 class FunCall : public ExpAst {
@@ -195,6 +209,7 @@ class FunCall : public ExpAst {
 	FunCall(Identifier *i){
 		name = i;
 	}
+	void print();
 	void set_name(Identifier *i);
 	void add_expression(ExpAst *e);
 };
@@ -209,6 +224,7 @@ class FloatConst : public ExpAst {
 	FloatConst(float f){
 		val = f;
 	}
+	void print();
 };
 
 class IntConst : public ExpAst {
@@ -221,6 +237,7 @@ class IntConst : public ExpAst {
 	IntConst(int i){
 		val = i;
 	}
+	void print();
 };
 
 class StringConst : public ExpAst {
@@ -233,19 +250,24 @@ class StringConst : public ExpAst {
 	StringConst(string s){
 		val = s;
 	}
+	void print();
 };
 
 class ArrayRef : public ExpAst {
 	
 	protected:
-	string id;
+	Identifier *name;
 	vector<ExpAst*> indices;
 	
 	public:
 	ArrayRef() {}
-	ArrayRef(string s, vector<ExpAst*> &i){
-		id = s;
-		indices = i;
+	ArrayRef(Identifier *i){
+		name = i;
+	}
+	ArrayRef(ArrayRef* child){
+		indices = child->indices;
+		name = child->name;
 	}
 	void add_index(ExpAst *e);
+	void print();
 };

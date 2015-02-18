@@ -1,6 +1,9 @@
 %%
 
-\"(\\[nt"\\]|[^"\\])*\"				return Parser::STRING_LITERAL;
+\"(\\[nt"\\]|[^"\\])*\"				{
+									Parser::d_val__ = std::string(matched());
+									return Parser::STRING_LITERAL;
+									}
 
 \/\/[^\n]*[\n]						// skip line comments
 \/\*([^*]*\*+[^*/])*[^*]*\*+\/		// skip block comments

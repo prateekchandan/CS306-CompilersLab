@@ -1,6 +1,6 @@
 all:    clean lex.cc parse.cc main.cc Scanner.h Scannerbase.h Scanner.ih Parser.h Parserbase.h Parser.ih
 	g++   --std=c++0x lex.cc parse.cc main.cc;
-	./a.out < test-cpp > junk;
+	./a.out < test-cpp > junk.scm;
         
 graph:
 	dot -Tps graph1.gv -o graph1.ps
@@ -29,4 +29,4 @@ Scanner.h: lex.l
 Scannerbase.h: lex.l
 
 clean:
-	rm -rf Parser* Scanner* a.out junk lex.cc parse.cc junk graph1*
+	rm -rf Parser* Scanner* a.out junk* lex.cc parse.cc graph1*
