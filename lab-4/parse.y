@@ -15,7 +15,7 @@
 %%
 
 translation_unit
-	: function_definition 
+	: function_definition
 	{
 		$$ = $1 ;
 		$$->print();
@@ -25,16 +25,19 @@ translation_unit
 	;
 
 function_definition
-	: type_specifier fun_declarator compound_statement
+	: type_specifier 
+	{
+		//current_scope = SCOPE::PARAM;
+	}
+	fun_declarator 
+	{
+		//current_scope = SCOPE::LOCAL;
+	}
+	compound_statement
 	{
 		$$ = $3 ;
+		//current_scope = SCOPE::GLOBAL;
 	}
-	;
-
-type_specifier
-	: VOID 	
-	| INT   
-	| FLOAT 
 	;
 
 fun_declarator
@@ -51,10 +54,6 @@ parameter_declaration
 	: type_specifier declarator 
 	;
 
-declarator
-	: IDENTIFIER 
-	| declarator '[' constant_expression ']' 
-	;
 
 constant_expression 
 	: INT_CONSTANT 
@@ -355,4 +354,15 @@ declaration
 declarator_list
 	: declarator
 	| declarator_list ',' declarator 
+	;
+
+declarator
+	: IDENTIFIER 
+	| declarator '[' constant_expression ']' 
+	;
+
+type_specifier
+	: VOID 	
+	| INT   
+	| FLOAT 
 	;

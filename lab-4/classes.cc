@@ -161,3 +161,5 @@ void ArrayRef::print(){
 	}
 	cout<<")";
 }
+
+SCOPE current_scope = SCOPE::GLOBAL;

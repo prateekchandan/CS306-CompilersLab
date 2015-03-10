@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <set>
+#include <map>
 using namespace std;
 
 // Some enum types for operators
@@ -271,4 +272,57 @@ class ArrayRef : public ExpAst {
 	}
 	void add_index(ExpAst *e);
 	void print();
+};
+
+// Classes and global variables related to symbol table maintenance
+enum SCOPE{
+	GLOBAL = 0,
+	LOCAL = 1,
+	PARAM = 2,
+};
+
+enum VAR_OR_FUNC{
+	VAR = 0,
+	FUNC = 1
+};
+
+enum BASETYPE{
+	VOID = 0,
+	INT = 1,
+	FLOAT = 2
+};
+
+struct TYPE{
+	int size;
+	BASETYPE basetype;
+	TYPE* child;
+	TYPE(){size = -1;}
+};
+
+class SymbolTable;
+
+// symbolTable Entry class
+class SymbolTableEntry
+{
+	string symbolName;
+	VAR_OR_FUNC vf;
+	SCOPE scope;
+	TYPE type;
+	int size;
+	int offset;
+	SymbolTable* table;
+
+public:
+	SymbolTableEntry();
+	~SymbolTableEntry();
+	
+};
+
+class SymbolTable
+{
+	map<string,SymbolTableEntry> Entry;
+public:
+	SymbolTable();
+	~SymbolTable();
+	
 };
