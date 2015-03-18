@@ -2,6 +2,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <stack>
 using namespace std;
 
 // Some enum types for operators
@@ -227,6 +228,7 @@ class FloatConst : public ExpAst {
 		val = f;
 	}
 	void print();
+	float getVal(){return val;}
 };
 
 class IntConst : public ExpAst {
@@ -240,6 +242,7 @@ class IntConst : public ExpAst {
 		val = i;
 	}
 	void print();
+	int getVal(){return val;}
 };
 
 class StringConst : public ExpAst {
@@ -253,6 +256,7 @@ class StringConst : public ExpAst {
 		val = s;
 	}
 	void print();
+	string getVal(){return val;}
 };
 
 class ArrayRef : public ExpAst {
@@ -297,32 +301,94 @@ struct TYPE{
 	BASETYPE basetype;
 	TYPE* child;
 	TYPE(){size = -1;}
+	TYPE(BASETYPE type){
+		child = NULL;
+		switch(type){
+			case BASETYPE::VOID: // VOID
+				size = 0;
+				basetype = BASETYPE::VOID;
+				break;
+			case BASETYPE::INT: // INT
+				size = 4;
+				basetype = BASETYPE::INT;
+				break;
+			case BASETYPE::FLOAT: // FLOAT
+				size = 4;
+				basetype = BASETYPE::FLOAT;
+				break;
+		}
+	}
+	TYPE(TYPE* c,int s){
+		child = c;
+		size = s;
+	}
+
+	void print(){
+		if(child != NULL){
+			cout<<"array("<<size<<",";
+				child->print();
+			cout<<")";
+		}
+		else if(basetype == BASETYPE::VOID) cout<<"void";
+		else if(basetype == BASETYPE::INT) cout<<"int";
+		else if(basetype == BASETYPE::FLOAT) cout<<"float";
+	}
 };
 
 class SymbolTable;
 
 // symbolTable Entry class
-class SymbolTableEntry
+struct SymbolTableEntry
 {
 	string symbolName;
 	VAR_OR_FUNC vf;
 	SCOPE scope;
-	TYPE type;
+	TYPE *type;
 	int size;
 	int offset;
 	SymbolTable* table;
 
-public:
-	SymbolTableEntry();
-	~SymbolTableEntry();
+	SymbolTableEntry(){table = NULL;};
+	~SymbolTableEntry(){};
+	void print(){
+		cout<<symbolName<<"\t";
+		switch(scope){
+			case SCOPE::LOCAL : cout<<"local"; break;
+			case SCOPE::PARAM : cout<<"param"; break;
+			case SCOPE::GLOBAL : cout<<"global"; break;
+		}
+		cout<<"\t";
+		type->print();
+		cout<<" size:"<<size;
+		cout<<"\t";
+		switch(vf){
+			case VAR_OR_FUNC::VAR : cout<<"variable"; break;
+			case VAR_OR_FUNC::FUNC : cout<<"function"; break;
+		}
+		cout<<"\t";
+		cout<<offset;
+		cout<<endl;
+	}
 	
 };
 
 class SymbolTable
 {
-	map<string,SymbolTableEntry> Entry;
+	map<string,SymbolTableEntry*> Entry;
 public:
-	SymbolTable();
+	SymbolTable(){};
 	~SymbolTable();
-	
+
+	bool AddEntry(string s,SymbolTableEntry* En1){
+		if(Entry.find(s) == Entry.end()){
+			Entry[s] = En1;
+			return true;
+		}
+		return false;
+	}
 };
+
+
+
+
+

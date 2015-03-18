@@ -4,56 +4,77 @@
 %token VOID INT FLOAT FLOAT_CONSTANT INT_CONSTANT AND_OP OR_OP
 %token EQ_OP NE_OP LE_OP GE_OP STRING_LITERAL IF ELSE WHILE FOR RETURN IDENTIFIER INC_OP
 
-%polymorphic eAst : ExpAst* ; sAst : StmtAst*; Int : int; Float : float; String : string;
+%polymorphic eAst : ExpAst* ; sAst : StmtAst*; Int : int; Float : float; String : string; Type : TYPE*;
+			symbolTableEntry : SymbolTableEntry*;
 
 %type <eAst> expression l_expression equality_expression relational_expression additive_expression multiplicative_expression unary_expression primary_expression postfix_expression logical_and_expression constant_expression expression_list unary_operator
 %type <sAst> translation_unit function_definition compound_statement statement_list statement selection_statement iteration_statement assignment_statement
 %type <Int> INT_CONSTANT
 %type <Float> FLOAT_CONSTANT
 %type <String> STRING_LITERAL IDENTIFIER
+%type <Type> type_specifier
+%type <symbolTableEntry> declarator;
 
 %%
 
 translation_unit
-	: function_definition
+	: 
+	function_definition 
 	{
 		$$ = $1 ;
-		$$->print();
-		cout<<endl;
+		$1->print();
+		cout<<endl<<"\n-----------------------\n";
+		global_offset = 0;
 	}
 	| translation_unit function_definition
+	{
+		$$ = $1 ;
+		$2->print();
+		cout<<endl<<"\n-----------------------\n";
+		global_offset = 0;
+	}
 	;
 
 function_definition
-	: type_specifier 
-	{
-		//current_scope = SCOPE::PARAM;
-	}
-	fun_declarator 
-	{
-		//current_scope = SCOPE::LOCAL;
-	}
-	compound_statement
+	: type_specifier fun_declarator compound_statement
 	{
 		$$ = $3 ;
-		//current_scope = SCOPE::GLOBAL;
+		current_scope = SCOPE::GLOBAL;
 	}
 	;
 
 fun_declarator
-	: IDENTIFIER '(' parameter_list ')'
-	| IDENTIFIER '(' ')' 
+	: IDENTIFIER '('
+	{
+		cout<<$1<<" : "<<current_scope<<endl;
+		current_scope = SCOPE::PARAM;
+	} 
+	parameter_list ')'
+	{
+		current_scope = SCOPE::LOCAL;
+	}
+	|
+	IDENTIFIER '(' ')' 
+	{
+		current_scope = SCOPE::LOCAL;
+	}
 	;
 
 parameter_list
 	: parameter_declaration 
+	{
+		current_scope = SCOPE::PARAM;
+	}
 	| parameter_list ',' parameter_declaration 
+	{
+		current_scope = SCOPE::PARAM;
+	}
 	;
 
 parameter_declaration
 	: type_specifier declarator 
+	{ $2->print();}
 	;
-
 
 constant_expression 
 	: INT_CONSTANT 
@@ -71,7 +92,7 @@ compound_statement
 	{
 		$$ = new BlockAst();
 	}
-	| '{' statement_list '}' 
+	| '{'  statement_list '}' 
 	{
 		$$ = $2;
 	}
@@ -342,6 +363,25 @@ iteration_statement
 	}
 	;
 
+
+type_specifier
+	: VOID 	
+	{
+		$$ = new TYPE(BASETYPE::VOID);
+		curr_type = $$;
+	}
+	| INT   
+	{
+		$$ = new TYPE(BASETYPE::INT);
+		curr_type = $$;
+	}
+	| FLOAT 
+	{
+		$$ = new TYPE(BASETYPE::FLOAT);
+		curr_type = $$;
+	}
+	;
+
 declaration_list
 	: declaration  					
 	| declaration_list declaration
@@ -353,16 +393,34 @@ declaration
 
 declarator_list
 	: declarator
+	{
+		$1->print();
+	}
 	| declarator_list ',' declarator 
+	{
+		$3->print();
+	}
 	;
 
 declarator
-	: IDENTIFIER 
+	: IDENTIFIER
+	{
+		$$ = new SymbolTableEntry;
+		$$->symbolName = $1;
+		$$->scope = current_scope;
+		$$->type = curr_type;
+		$$->size = curr_type->size;
+		$$->vf = VAR_OR_FUNC::VAR;
+		$$->offset = global_offset;
+		global_offset += $$->size;
+	} 
 	| declarator '[' constant_expression ']' 
-	;
-
-type_specifier
-	: VOID 	
-	| INT   
-	| FLOAT 
+	{
+		TYPE *temp =  new TYPE($1->type,((IntConst*)$3)->getVal());
+		$$ = $1;
+		$$->type = temp;
+		global_offset -= $$->size;
+		$$->size *=  temp->size;
+		global_offset += $$->size;
+	}
 	;

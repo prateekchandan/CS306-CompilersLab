@@ -162,4 +162,13 @@ void ArrayRef::print(){
 	cout<<")";
 }
 
-SCOPE current_scope = SCOPE::GLOBAL;
+
+/********* GLOBALS FOR SYMBOL TABLE ***********/
+SCOPE current_scope = SCOPE::GLOBAL;		// global Scope variable
+
+SymbolTable* CurrentSymbolTable = new SymbolTable;
+vector<SymbolTable*> SymbolTableStack(1,CurrentSymbolTable);
+
+TYPE* curr_type;
+
+int global_offset = 0;
