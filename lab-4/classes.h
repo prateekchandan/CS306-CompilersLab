@@ -357,8 +357,7 @@ struct SymbolTableEntry
 			case SCOPE::PARAM : cout<<"param"; break;
 			case SCOPE::GLOBAL : cout<<"global"; break;
 		}
-		cout<<"\t";
-		type->print();
+		
 		cout<<" size:"<<size;
 		cout<<"\t";
 		switch(vf){
@@ -367,6 +366,8 @@ struct SymbolTableEntry
 		}
 		cout<<"\t";
 		cout<<offset;
+		cout<<"\t";
+		type->print();
 		cout<<endl;
 	}
 	
