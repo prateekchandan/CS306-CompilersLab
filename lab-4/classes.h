@@ -5,6 +5,138 @@
 #include <stack>
 using namespace std;
 
+
+
+// Classes and global variables related to symbol table maintenance
+enum SCOPE{
+	GLOBAL = 0,
+	LOCAL = 1,
+	PARAM = 2,
+};
+
+enum VAR_OR_FUNC{
+	VAR = 0,
+	FUNC = 1
+};
+
+enum BASETYPE{
+	VOID = 0,
+	INT = 1,
+	FLOAT = 2
+};
+
+struct TYPE{
+	int size;
+	BASETYPE basetype;
+	TYPE* child;
+	TYPE(){size = -1;}
+	TYPE(BASETYPE type){
+		child = NULL;
+		switch(type){
+			case BASETYPE::VOID: // VOID
+				size = 0;
+				basetype = BASETYPE::VOID;
+				break;
+			case BASETYPE::INT: // INT
+				size = 4;
+				basetype = BASETYPE::INT;
+				break;
+			case BASETYPE::FLOAT: // FLOAT
+				size = 4;
+				basetype = BASETYPE::FLOAT;
+				break;
+		}
+	}
+	TYPE(TYPE* c,int s){
+		child = c;
+		size = s;
+	}
+
+	void print(){
+		if(child != NULL){
+			cout<<"array("<<size<<",";
+				child->print();
+			cout<<")";
+		}
+		else if(basetype == BASETYPE::VOID) cout<<"void";
+		else if(basetype == BASETYPE::INT) cout<<"int";
+		else if(basetype == BASETYPE::FLOAT) cout<<"float";
+	}
+};
+
+class SymbolTable;
+
+// symbolTable Entry class
+struct SymbolTableEntry
+{
+	string symbolName;
+	VAR_OR_FUNC vf;
+	SCOPE scope;
+	TYPE *type;
+	int size;
+	int offset;
+	SymbolTable* table;
+
+	SymbolTableEntry(){
+		table = NULL;
+		size = 0; 
+		offset=0;
+		type =NULL;
+	};
+
+	~SymbolTableEntry(){};
+
+	void print(){
+		cout<<symbolName<<"\t";
+		switch(scope){
+			case SCOPE::LOCAL : cout<<"local"; break;
+			case SCOPE::PARAM : cout<<"param"; break;
+			case SCOPE::GLOBAL : cout<<"global"; break;
+		}
+		
+		cout<<" size:"<<size;
+		cout<<"\t";
+		switch(vf){
+			case VAR_OR_FUNC::VAR : cout<<"variable"; break;
+			case VAR_OR_FUNC::FUNC : cout<<"function"; break;
+		}
+		cout<<"\t";
+		cout<<offset;
+		cout<<"\t";
+		
+		if(type!=NULL)
+			type->print();
+		
+		cout<<endl;
+	}	
+};
+
+class SymbolTable
+{
+	map<string,SymbolTableEntry*> Entry;
+	public:
+	SymbolTable(){};
+	~SymbolTable();
+
+	bool AddEntry(string s,SymbolTableEntry* En1){
+		if(Entry.find(s) == Entry.end()){
+			Entry[s] = En1;
+			return true;
+		}
+		return false;
+	}
+
+	void print(){
+		for (map<string,SymbolTableEntry*>::iterator it=Entry.begin(); it!=Entry.end(); ++it)
+    		it->second->print();
+    	cout<<endl;
+	}
+};
+
+
+/***********************************************
+************* DEFINITIONS FOR AST **************
+************************************************/
 // Some enum types for operators
 enum OP_TYPE{
 	OR_OP = 0,
@@ -52,6 +184,8 @@ class StmtAst : public abstract_astnode {
 };
 
 class ExpAst : public abstract_astnode {
+	protected:
+		TYPE type;
 	public:
 	virtual void print () = 0;
 };
@@ -276,117 +410,6 @@ class ArrayRef : public ExpAst {
 	}
 	void add_index(ExpAst *e);
 	void print();
-};
-
-// Classes and global variables related to symbol table maintenance
-enum SCOPE{
-	GLOBAL = 0,
-	LOCAL = 1,
-	PARAM = 2,
-};
-
-enum VAR_OR_FUNC{
-	VAR = 0,
-	FUNC = 1
-};
-
-enum BASETYPE{
-	VOID = 0,
-	INT = 1,
-	FLOAT = 2
-};
-
-struct TYPE{
-	int size;
-	BASETYPE basetype;
-	TYPE* child;
-	TYPE(){size = -1;}
-	TYPE(BASETYPE type){
-		child = NULL;
-		switch(type){
-			case BASETYPE::VOID: // VOID
-				size = 0;
-				basetype = BASETYPE::VOID;
-				break;
-			case BASETYPE::INT: // INT
-				size = 4;
-				basetype = BASETYPE::INT;
-				break;
-			case BASETYPE::FLOAT: // FLOAT
-				size = 4;
-				basetype = BASETYPE::FLOAT;
-				break;
-		}
-	}
-	TYPE(TYPE* c,int s){
-		child = c;
-		size = s;
-	}
-
-	void print(){
-		if(child != NULL){
-			cout<<"array("<<size<<",";
-				child->print();
-			cout<<")";
-		}
-		else if(basetype == BASETYPE::VOID) cout<<"void";
-		else if(basetype == BASETYPE::INT) cout<<"int";
-		else if(basetype == BASETYPE::FLOAT) cout<<"float";
-	}
-};
-
-class SymbolTable;
-
-// symbolTable Entry class
-struct SymbolTableEntry
-{
-	string symbolName;
-	VAR_OR_FUNC vf;
-	SCOPE scope;
-	TYPE *type;
-	int size;
-	int offset;
-	SymbolTable* table;
-
-	SymbolTableEntry(){table = NULL;};
-	~SymbolTableEntry(){};
-	void print(){
-		cout<<symbolName<<"\t";
-		switch(scope){
-			case SCOPE::LOCAL : cout<<"local"; break;
-			case SCOPE::PARAM : cout<<"param"; break;
-			case SCOPE::GLOBAL : cout<<"global"; break;
-		}
-		
-		cout<<" size:"<<size;
-		cout<<"\t";
-		switch(vf){
-			case VAR_OR_FUNC::VAR : cout<<"variable"; break;
-			case VAR_OR_FUNC::FUNC : cout<<"function"; break;
-		}
-		cout<<"\t";
-		cout<<offset;
-		cout<<"\t";
-		type->print();
-		cout<<endl;
-	}
-	
-};
-
-class SymbolTable
-{
-	map<string,SymbolTableEntry*> Entry;
-public:
-	SymbolTable(){};
-	~SymbolTable();
-
-	bool AddEntry(string s,SymbolTableEntry* En1){
-		if(Entry.find(s) == Entry.end()){
-			Entry[s] = En1;
-			return true;
-		}
-		return false;
-	}
 };
 
 

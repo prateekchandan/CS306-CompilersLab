@@ -13,7 +13,7 @@
 %type <Float> FLOAT_CONSTANT
 %type <String> STRING_LITERAL IDENTIFIER
 %type <Type> type_specifier
-%type <symbolTableEntry> declarator;
+%type <symbolTableEntry> declarator fun_declarator;
 
 %%
 
@@ -22,16 +22,29 @@ translation_unit
 	function_definition 
 	{
 		$$ = $1 ;
+		CurrentSymbolTable->print();
 		$1->print();
 		cout<<endl<<"\n-----------------------\n";
-		global_offset = 0;
+
+		// Restoring Environment
+		CurrentSymbolTable = SymbolTableStack.back();
+		SymbolTableStack.pop_back();
+		global_offset = offsetStack.back();
+		offsetStack.pop_back();
 	}
 	| translation_unit function_definition
 	{
 		$$ = $1 ;
+		CurrentSymbolTable->print();
 		$2->print();
 		cout<<endl<<"\n-----------------------\n";
-		global_offset = 0;
+		
+		// Restoring Environment
+		CurrentSymbolTable = SymbolTableStack.back();
+		SymbolTableStack.pop_back();
+		global_offset = offsetStack.back();
+		offsetStack.pop_back();
+
 	}
 	;
 
@@ -39,15 +52,32 @@ function_definition
 	: type_specifier fun_declarator compound_statement
 	{
 		$$ = $3 ;
-		current_scope = SCOPE::GLOBAL;
 	}
 	;
 
 fun_declarator
-	: IDENTIFIER '('
+	:
+	IDENTIFIER '('
 	{
-		cout<<$1<<" : "<<current_scope<<endl;
+		$$ = new SymbolTableEntry;
+		$$->symbolName = $1;
+		$$->scope = current_scope;
+		$$->vf = VAR_OR_FUNC::FUNC;
+		$$->type = curr_type;
+
 		current_scope = SCOPE::PARAM;
+
+		SymbolTable *temp = new SymbolTable;
+		$$->table = temp;
+
+		bool check=CurrentSymbolTable->AddEntry($1,$$);
+		if(!check)
+			cout<<"Error : Function "<<$1<<" Redefined\n";
+
+		SymbolTableStack.push_back(CurrentSymbolTable);
+		CurrentSymbolTable = temp;
+		offsetStack.push_back(global_offset);
+		global_offset = 0;
 	} 
 	parameter_list ')'
 	{
@@ -73,7 +103,11 @@ parameter_list
 
 parameter_declaration
 	: type_specifier declarator 
-	{ $2->print();}
+	{
+		bool check=CurrentSymbolTable->AddEntry($2->symbolName,$2);
+		if(!check)
+			cout<<"Error :"<<$2->symbolName<<" Redefined\n";
+	}
 	;
 
 constant_expression 
@@ -136,6 +170,19 @@ statement
 	| RETURN expression ';'
 	{
 		$$ = new ReturnSt($2);
+	}
+	|function_definition
+	{
+		$$ = $1 ;
+		CurrentSymbolTable->print();
+		$1->print();
+		cout<<endl<<"\n-----------------------\n";
+
+		// Restoring Environment
+		CurrentSymbolTable = SymbolTableStack.back();
+		SymbolTableStack.pop_back();
+		global_offset = offsetStack.back();
+		offsetStack.pop_back();
 	}
 	;
 
@@ -394,11 +441,15 @@ declaration
 declarator_list
 	: declarator
 	{
-		$1->print();
+		bool check=CurrentSymbolTable->AddEntry($1->symbolName,$1);
+		if(!check)
+			cout<<"Error :"<<$1->symbolName<<" Redefined\n";
 	}
 	| declarator_list ',' declarator 
 	{
-		$3->print();
+		bool check=CurrentSymbolTable->AddEntry($3->symbolName,$3);
+		if(!check)
+			cout<<"Error :"<<$3->symbolName<<" Redefined\n";
 	}
 	;
 

@@ -168,6 +168,7 @@ SCOPE current_scope = SCOPE::GLOBAL;		// global Scope variable
 
 SymbolTable* CurrentSymbolTable = new SymbolTable;
 vector<SymbolTable*> SymbolTableStack(1,CurrentSymbolTable);
+vector<int> offsetStack(1,0);
 
 TYPE* curr_type;
 
