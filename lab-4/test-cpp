@@ -1,0 +1,22 @@
+int main(int x,int y){
+	int a;
+	float x,y,z,m,n;
+	a=printf("I am Shyam");
+	 a = x++ + y;
+}
+
+int testfn(int m,float n){
+	int x;
+	float z[1][2][3][4];
+	int a,b,c,d;
+	int inside_func(int m,int n){
+		int a;
+		a=m;
+		int nest_level2(int aa,float ab){
+			int a ;
+			a = ab;
+		}
+		a=b+a=c;
+	}
+	x = z;
+}
