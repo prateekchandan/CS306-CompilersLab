@@ -127,6 +127,7 @@ class SymbolTable
 	}
 
 	void print(){
+		cout<<"\nSymboltable : \n";
 		for (map<string,SymbolTableEntry*>::iterator it=Entry.begin(); it!=Entry.end(); ++it)
     		it->second->print();
     	cout<<endl;
@@ -137,6 +138,7 @@ class SymbolTable
 /***********************************************
 ************* DEFINITIONS FOR AST **************
 ************************************************/
+
 // Some enum types for operators
 enum OP_TYPE{
 	OR_OP = 0,
@@ -411,7 +413,6 @@ class ArrayRef : public ExpAst {
 	void add_index(ExpAst *e);
 	void print();
 };
-
 
 
 

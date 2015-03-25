@@ -173,3 +173,4 @@ vector<int> offsetStack(1,0);
 TYPE* curr_type;
 
 int global_offset = 0;
+

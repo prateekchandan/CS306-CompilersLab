@@ -7,7 +7,10 @@
 
 \/\/[^\n]*[\n]						// skip line comments
 \/\*([^*]*\*+[^*/])*[^*]*\*+\/		// skip block comments
-[ \t\n]								// skip whitespaces
+[ \t]								// skip whitespaces
+\n 									{
+										Parser::line_no++;
+									}
 
 void								return Parser::VOID;
 int									return Parser::INT;

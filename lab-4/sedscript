@@ -7,9 +7,11 @@ sed -i '/include "Parser.h"/a #include "classes.cc"' Parser.ih;
 sed -i '\|STYPE__     d_val__;| d 
 ' Parserbase.h
 
-sed -i '\|typedef Meta__::SType STYPE__;| a \\tpublic: static STYPE__  d_val__;
+sed -i '\|typedef Meta__::SType STYPE__;| a \\tpublic: static STYPE__  d_val__;\nstatic int line_no;
 ' Parserbase.h 
 
-sed -i '\|void Parser::print__()| i Meta__::SType ParserBase::d_val__;
+sed -i '\|void Parser::print__()| i Meta__::SType ParserBase::d_val__;\nint ParserBase::line_no=1;
 ' parse.cc
+
+
 

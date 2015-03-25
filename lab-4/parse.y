@@ -106,7 +106,7 @@ parameter_declaration
 	{
 		bool check=CurrentSymbolTable->AddEntry($2->symbolName,$2);
 		if(!check)
-			cout<<"Error :"<<$2->symbolName<<" Redefined\n";
+			cout<<"Error at Line "<<line_no<<" :"<<$2->symbolName<<" Redefined\n";
 	}
 	;
 
@@ -443,13 +443,13 @@ declarator_list
 	{
 		bool check=CurrentSymbolTable->AddEntry($1->symbolName,$1);
 		if(!check)
-			cout<<"Error :"<<$1->symbolName<<" Redefined\n";
+			cout<<"Error at Line "<<line_no<<" :"<<$1->symbolName<<" Redefined\n";
 	}
 	| declarator_list ',' declarator 
 	{
 		bool check=CurrentSymbolTable->AddEntry($3->symbolName,$3);
 		if(!check)
-			cout<<"Error :"<<$3->symbolName<<" Redefined\n";
+			cout<<"Error at Line "<<line_no<<" :"<<$3->symbolName<<" Redefined\n";
 	}
 	;
 

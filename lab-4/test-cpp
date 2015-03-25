@@ -1,3 +1,6 @@
+
+
+
 int main(int x,int y){
 	int a;
 	float x,y,z,m,n;
@@ -6,6 +9,7 @@ int main(int x,int y){
 }
 
 int testfn(int m,float n){
+	int x;
 	int x;
 	float z[1][2][3][4];
 	int a,b,c,d;
