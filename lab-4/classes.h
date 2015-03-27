@@ -22,7 +22,8 @@ enum VAR_OR_FUNC{
 enum BASETYPE{
 	VOID = 0,
 	INT = 1,
-	FLOAT = 2
+	FLOAT = 2,
+	STRING = 3
 };
 
 struct TYPE{
@@ -45,6 +46,9 @@ struct TYPE{
 				size = 4;
 				basetype = BASETYPE::FLOAT;
 				break;
+			default:
+				basetype = type;
+				size = 0;
 		}
 	}
 	TYPE(TYPE* c,int s){
@@ -142,24 +146,39 @@ class SymbolTable
 // Some enum types for operators
 enum OP_TYPE{
 	OR_OP = 0,
-	AND_OP = 1,
-	EQ_OP = 2,
-	NE_OP = 3,
-	LT = 4,
-	LE_OP = 5,
-	GT = 6,
-	GE_OP = 7,
-	PLUS = 8,
-	MINUS = 9,
-	MULT = 10,
-	DIV = 11,
-	ASSIGN = 12
+	AND_OP,
+	EQ_OP_INT,
+	EQ_OP_FLOAT,
+	NE_OP_INT,
+	NE_OP_FLOAT,
+	LT_INT,
+	LT_FLOAT,
+	LE_OP_INT,
+	LE_OP_FLOAT,
+	GT_INT,
+	GT_FLOAT,
+	GE_OP_INT,
+	GE_OP_FLOAT,
+	PLUS_INT,
+	PLUS_FLOAT,
+	MINUS_INT,
+	MINUS_FLOAT,
+	MULT_INT,
+	MULT_FLOAT,
+	DIV_INT,
+	DIV_FLOAT,
+	ASSIGN_INT,
+	ASSIGN_FLOAT
 };
 
 enum UNOP_TYPE{
-	UMINUS = 13,
-	NOT = 14,
-	PP = 15
+	UMINUS_INT = 24,
+	UMINUS_FLOAT,
+	NOT,
+	PP_INT,
+	PP_FLOAT,
+	TO_INT,
+	TO_FLOAT
 };
 
 // Abstract class for a node in the AST /////////////////////////////////////
@@ -186,9 +205,8 @@ class StmtAst : public abstract_astnode {
 };
 
 class ExpAst : public abstract_astnode {
-	protected:
-		TYPE type;
 	public:
+		TYPE* type;
 	virtual void print () = 0;
 };
 
@@ -320,6 +338,12 @@ class UnOp : public ExpAst {
 		op_type = o;
 		exp = e;
 	}
+	int get_type(){
+		return op_type;
+	}
+	void set_type(int o){
+		op_type = o;
+	}
 	void set_expression(ExpAst *e);
 	void print();
 };
@@ -362,6 +386,7 @@ class FloatConst : public ExpAst {
 	FloatConst() {}
 	FloatConst(float f){
 		val = f;
+		type = new TYPE(BASETYPE::FLOAT);
 	}
 	void print();
 	float getVal(){return val;}
@@ -376,6 +401,7 @@ class IntConst : public ExpAst {
 	IntConst() {}
 	IntConst(int i){
 		val = i;
+		type = new TYPE(BASETYPE::INT);
 	}
 	void print();
 	int getVal(){return val;}
@@ -390,6 +416,7 @@ class StringConst : public ExpAst {
 	StringConst() {}
 	StringConst(string s){
 		val = s;
+		type = new TYPE(BASETYPE::STRING);
 	}
 	void print();
 	string getVal(){return val;}

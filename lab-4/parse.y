@@ -193,7 +193,13 @@ assignment_statement
 	}								
 	|  l_expression '=' expression ';'
 	{
+		validate($1,$3);
+		
+		if(!(*($1->type) == *($3->type)))
+			$3 = new UnOp(getTypeCast($1->type), $3);
+		
 		$$ = new Ass($1, $3);
+
 	}
 	;
 
@@ -205,6 +211,7 @@ expression
 	| expression OR_OP logical_and_expression
 	{
 		$$ = new Op(OP_TYPE::OR_OP, $1, $3);
+		$$->type = new TYPE(BASETYPE::INT);
 	}
 	;
 
@@ -216,6 +223,7 @@ logical_and_expression
 	| logical_and_expression AND_OP equality_expression
 	{
 		$$ = new Op(OP_TYPE::AND_OP, $1, $3);
+		$$->type = new TYPE(BASETYPE::INT);
 	}
 	;
 
@@ -226,11 +234,25 @@ equality_expression
 	} 
 	| equality_expression EQ_OP relational_expression
 	{
-		$$ = new Op(OP_TYPE::EQ_OP, $1, $3);
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		
+		if(temp->basetype == BASETYPE::INT)
+			$$ = new Op(OP_TYPE::EQ_OP_INT, $1, $3);
+		else
+			$$ = new Op(OP_TYPE::EQ_OP_FLOAT, $1, $3);
+
+		$$->type = new TYPE(BASETYPE::INT);
 	}
 	| equality_expression NE_OP relational_expression
 	{
-		$$ = new Op(OP_TYPE::NE_OP, $1, $3);
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		
+		if(temp->basetype == BASETYPE::INT)
+			$$ = new Op(OP_TYPE::NE_OP_INT, $1, $3);
+		else
+			$$ = new Op(OP_TYPE::NE_OP_FLOAT, $1, $3);
+
+		$$->type = new TYPE(BASETYPE::INT);
 	}
 	;
 	
@@ -241,19 +263,43 @@ relational_expression
 	}
 	| relational_expression '<' additive_expression
 	{
-		$$ = new Op(OP_TYPE::LT, $1, $3);
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		if(temp->basetype == BASETYPE::INT)
+			$$ = new Op(OP_TYPE::LT_INT, $1, $3);
+		else
+			$$ = new Op(OP_TYPE::LT_FLOAT, $1, $3);
+
+		$$->type = new TYPE(BASETYPE::INT);
 	}
 	| relational_expression '>' additive_expression
 	{
-		$$ = new Op(OP_TYPE::GT, $1, $3);
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		if(temp->basetype == BASETYPE::INT)
+			$$ = new Op(OP_TYPE::GT_INT, $1, $3);
+		else
+			$$ = new Op(OP_TYPE::GT_FLOAT, $1, $3);
+
+		$$->type = new TYPE(BASETYPE::INT);
 	}
 	| relational_expression LE_OP additive_expression
 	{
-		$$ = new Op(OP_TYPE::LE_OP, $1, $3);
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		if(temp->basetype == BASETYPE::INT)
+			$$ = new Op(OP_TYPE::LE_OP_INT, $1, $3);
+		else
+			$$ = new Op(OP_TYPE::LE_OP_FLOAT, $1, $3);
+
+		$$->type = new TYPE(BASETYPE::INT);
 	}
 	| relational_expression GE_OP additive_expression
 	{
-		$$ = new Op(OP_TYPE::GE_OP, $1, $3);
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		if(temp->basetype == BASETYPE::INT)
+			$$ = new Op(OP_TYPE::GE_OP_INT, $1, $3);
+		else
+			$$ = new Op(OP_TYPE::GE_OP_FLOAT, $1, $3);
+
+		$$->type = new TYPE(BASETYPE::INT);
 	}
 	;
 
@@ -264,11 +310,24 @@ additive_expression
 	}
 	| additive_expression '+' multiplicative_expression
 	{
-		$$ = new Op(OP_TYPE::PLUS, $1, $3);
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp->basetype == BASETYPE::INT)
+			$$ = new Op(OP_TYPE::PLUS_INT, $1, $3);
+		else
+			$$ = new Op(OP_TYPE::PLUS_FLOAT, $1, $3);
+
+		$$->type = new TYPE(temp->basetype);
+
 	}
 	| additive_expression '-' multiplicative_expression
 	{
-		$$ = new Op(OP_TYPE::MINUS, $1, $3);
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		if(temp->basetype == BASETYPE::INT)
+			$$ = new Op(OP_TYPE::MINUS_INT, $1, $3);
+		else
+			$$ = new Op(OP_TYPE::MINUS_FLOAT, $1, $3);
+
+		$$->type = new TYPE(temp->basetype);
 	}
 	;
 
@@ -279,11 +338,25 @@ multiplicative_expression
 	}
 	| multiplicative_expression '*' unary_expression
 	{
-		$$ = new Op(OP_TYPE::MULT, $1, $3);
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		if(temp->basetype == BASETYPE::INT)
+			$$ = new Op(OP_TYPE::MULT_INT, $1, $3);
+		else
+			$$ = new Op(OP_TYPE::MULT_FLOAT, $1, $3);
+
+		$$->type = new TYPE(temp->basetype);
+
 	}
 	| multiplicative_expression '/' unary_expression
 	{
-		$$ = new Op(OP_TYPE::DIV, $1, $3);
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		if(temp->basetype == BASETYPE::INT)
+			$$ = new Op(OP_TYPE::DIV_INT, $1, $3);
+		else
+			$$ = new Op(OP_TYPE::DIV_FLOAT, $1, $3);
+
+		$$->type = new TYPE(temp->basetype);
+
 	}
 	;
 	
@@ -295,6 +368,10 @@ unary_expression
 	| unary_operator postfix_expression
 	{
 		((UnOp*)$1)->set_expression($2);
+		$1->type = $2->type;
+		if($2->type->basetype==BASETYPE::FLOAT && ((UnOp*)$1)->get_type()==UNOP_TYPE::UMINUS_INT){
+			((UnOp*)$1)->set_type(UNOP_TYPE::UMINUS_FLOAT);
+		}
 		$$ = $1;
 	}
 	;
@@ -315,7 +392,15 @@ postfix_expression
 	}
 	| l_expression INC_OP
 	{
-		$$ = new UnOp(UNOP_TYPE::PP, $1);
+		if($1->type->basetype == BASETYPE::INT)
+			$$ = new UnOp(UNOP_TYPE::PP_INT, $1);
+		else if($1->type->basetype == BASETYPE::FLOAT)
+			$$ = new UnOp(UNOP_TYPE::PP_FLOAT, $1);
+		else{
+			cout<<"Error at Line "<<line_no<<" : Incompatible expression type\n";
+			exit(0);
+		}
+		$$->type = $1->type;
 	}
 	;
 
@@ -326,7 +411,13 @@ primary_expression
 	}
 	| l_expression '=' expression
 	{
-		$$ = new Op(OP_TYPE::ASSIGN, $1, $3);
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		if(temp->basetype == BASETYPE::INT)
+			$$ = new Op(OP_TYPE::ASSIGN_INT, $1, $3);
+		else
+			$$ = new Op(OP_TYPE::ASSIGN_FLOAT, $1, $3);
+
+		$$->type = new TYPE(temp->basetype);
 	}
 	| INT_CONSTANT
 	{
@@ -351,6 +442,7 @@ l_expression
 	{
 		$$ = new Identifier($1);
 		identifiers.insert((ExpAst*)$$);
+		$$->type = new TYPE(BASETYPE::INT);
 	}
 	| l_expression '[' expression ']'
 	{
@@ -384,7 +476,7 @@ expression_list
 unary_operator
 	: '-'
 	{
-		$$ = new UnOp(UNOP_TYPE::UMINUS);
+		$$ = new UnOp(UNOP_TYPE::UMINUS_INT);
 	}
 	| '!'
 	{
