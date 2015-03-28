@@ -119,8 +119,13 @@ class SymbolTable
 {
 	string name;
 	map<string,SymbolTableEntry*> Entry;
+	int param_count;
+
 	public:
-	SymbolTable(string n = "Junk"){name = n;};
+	SymbolTable(string n = "Junk"){
+		param_count = 0;
+		name = n;
+	};
 	~SymbolTable();
 
 	bool AddEntry(string s,SymbolTableEntry* En1){
@@ -141,6 +146,14 @@ class SymbolTable
 		for (map<string,SymbolTableEntry*>::iterator it=Entry.begin(); it!=Entry.end(); ++it)
     		it->second->print();
     	cout<<endl;
+	}
+
+	void param_inc(){
+		param_count++;
+	}
+
+	int get_param_count(){
+		return param_count;
 	}
 };
 
@@ -381,6 +394,9 @@ class FunCall : public ExpAst {
 	void print();
 	void set_name(Identifier *i);
 	void add_expression(ExpAst *e);
+	int get_param_count(){
+		return expression_list.size();
+	}
 };
 
 class FloatConst : public ExpAst {

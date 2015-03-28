@@ -223,6 +223,9 @@ TYPE* ExpAstTypeCast(ExpAst **a,ExpAst **b){
 	{
 		return NULL;
 	}
+	if(type->basetype != BASETYPE::INT && type->basetype != BASETYPE::FLOAT)
+		return NULL;
+
 	if((*a)->type->basetype != type->basetype)
 		*a = new UnOp(getTypeCast(type), *a);
 
@@ -231,6 +234,22 @@ TYPE* ExpAstTypeCast(ExpAst **a,ExpAst **b){
 
 	return type;
 }	
+
+int GetFuncParamCount(string s){
+	SymbolTable* temp = CurrentSymbolTable;
+	SymbolTableEntry* ret = temp->GetEntry(s);
+	if(ret!=NULL)
+		return ret->table->get_param_count();
+
+	for (int i = SymbolTableStack.size()-1; i >= 0  ; --i)
+	{
+		temp = SymbolTableStack[i];
+		ret = temp->GetEntry(s);
+		if(ret!=NULL)
+			return ret->table->get_param_count();
+	}
+	return 0;
+}
 
 TYPE* SearchSymbolTable(string s){
 	SymbolTable* temp = CurrentSymbolTable;

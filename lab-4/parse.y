@@ -9,7 +9,7 @@
 
 %type <eAst> expression l_expression equality_expression relational_expression additive_expression multiplicative_expression unary_expression primary_expression postfix_expression logical_and_expression constant_expression expression_list unary_operator
 %type <sAst> translation_unit function_definition compound_statement statement_list statement selection_statement iteration_statement assignment_statement
-%type <Int> INT_CONSTANT
+%type <Int> INT_CONSTANT parameter_list
 %type <Float> FLOAT_CONSTANT
 %type <String> STRING_LITERAL IDENTIFIER
 %type <Type> type_specifier
@@ -72,7 +72,7 @@ fun_declarator
 
 		bool check=CurrentSymbolTable->AddEntry($1,$$);
 		if(!check)
-			cout<<"Error : Function "<<$1<<" Redefined\n";
+			cout<<"Error at line "<<line_no<<" : Function "<<$1<<" Redefined\n";
 
 		SymbolTableStack.push_back(CurrentSymbolTable);
 		CurrentSymbolTable = temp;
@@ -100,7 +100,7 @@ fun_declarator
 
 		bool check=CurrentSymbolTable->AddEntry($1,$$);
 		if(!check)
-			cout<<"Error : Function "<<$1<<" Redefined\n";
+			cout<<"Error at line "<<line_no<<" : Function "<<$1<<" Redefined\n";
 
 		SymbolTableStack.push_back(CurrentSymbolTable);
 		CurrentSymbolTable = temp;
@@ -115,10 +115,12 @@ parameter_list
 	: parameter_declaration 
 	{
 		current_scope = SCOPE::PARAM;
+		CurrentSymbolTable->param_inc();
 	}
 	| parameter_list ',' parameter_declaration 
 	{
 		current_scope = SCOPE::PARAM;
+		CurrentSymbolTable->param_inc();
 	}
 	;
 
@@ -127,7 +129,7 @@ parameter_declaration
 	{
 		bool check=CurrentSymbolTable->AddEntry($2->symbolName,$2);
 		if(!check)
-			cout<<"Error at Line "<<line_no<<" :"<<$2->symbolName<<" Redefined\n";
+			cout<<"Error at line "<<line_no<<" : "<<$2->symbolName<<" Redefined\n";
 	}
 	;
 
@@ -192,19 +194,6 @@ statement
 	{
 		$$ = new ReturnSt($2);
 	}
-	|function_definition
-	{
-		$$ = $1 ;
-		CurrentSymbolTable->print();
-		$1->print();
-		cout<<endl<<"\n-----------------------\n";
-
-		// Restoring Environment
-		CurrentSymbolTable = SymbolTableStack.back();
-		SymbolTableStack.pop_back();
-		global_offset = offsetStack.back();
-		offsetStack.pop_back();
-	}
 	;
 
 assignment_statement
@@ -216,7 +205,7 @@ assignment_statement
 	{
 		TYPE* temp = validate($1,$3);
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast while assigning\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast while assigning\n";
 			exit(0);
 		}
 		
@@ -261,7 +250,7 @@ equality_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
 		
@@ -276,7 +265,7 @@ equality_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
 		
@@ -298,7 +287,7 @@ relational_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
 		if(temp->basetype == BASETYPE::INT)
@@ -312,7 +301,7 @@ relational_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
 		if(temp->basetype == BASETYPE::INT)
@@ -326,7 +315,7 @@ relational_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
 		if(temp->basetype == BASETYPE::INT)
@@ -340,7 +329,7 @@ relational_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
 		if(temp->basetype == BASETYPE::INT)
@@ -361,7 +350,7 @@ additive_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		}
 		if(temp->basetype == BASETYPE::INT)
@@ -376,7 +365,7 @@ additive_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
 		if(temp->basetype == BASETYPE::INT)
@@ -397,7 +386,7 @@ multiplicative_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
 		if(temp->basetype == BASETYPE::INT)
@@ -412,7 +401,7 @@ multiplicative_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
 		if(temp->basetype == BASETYPE::INT)
@@ -451,7 +440,12 @@ postfix_expression
 		$$ = new FunCall(new Identifier());
 		$$->type = SearchSymbolTable($1);
 		if($$->type == NULL){
-			cout<<"Error at Line "<<line_no<<" :"<<$1<<" Undefined\n";
+			cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
+			exit(0);
+		}
+		int num = GetFuncParamCount($1);
+		if(num != 0){
+			cout<<"Error at line "<<line_no<<" : In call to function "<<$1<<": 0 Parameters passed but "<<num<<" required\n";
 			exit(0);
 		}
 	}
@@ -461,7 +455,13 @@ postfix_expression
 		((FunCall*)$$)->set_name(new Identifier($1));
 		$$->type = SearchSymbolTable($1);
 		if($$->type == NULL){
-			cout<<"Error at Line "<<line_no<<" :"<<$1<<" Undefined\n";
+			cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
+			exit(0);
+		}
+		int num = GetFuncParamCount($1);
+		int num1 = ((FunCall*)$3)->get_param_count();
+		if(num != num1){
+			cout<<"Error at line "<<line_no<<" :  In call to function "<<$1<<": "<<num1<<" Parameters passed but "<<num<<" required\n";
 			exit(0);
 		}
 	}
@@ -472,7 +472,7 @@ postfix_expression
 		else if($1->type->basetype == BASETYPE::FLOAT)
 			$$ = new UnOp(UNOP_TYPE::PP_FLOAT, $1);
 		else{
-			cout<<"Error at Line "<<line_no<<" : Incompatible expression type\n";
+			cout<<"Error at line "<<line_no<<" : Incompatible expression type\n";
 			exit(0);
 		}
 		$$->type = $1->type;
@@ -488,7 +488,7 @@ primary_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
 		if(temp==NULL){
-			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
 		if(temp->basetype == BASETYPE::INT)
@@ -523,24 +523,24 @@ l_expression
 		identifiers.insert((ExpAst*)$$);
 		$$->type = SearchSymbolTable($1);
 		if($$->type == NULL){
-			cout<<"Error at Line "<<line_no<<" :"<<$1<<" Undefined\n";
+			cout<<"Error at line "<<line_no<<" :"<<$1<<" Undefined\n";
 			exit(0);
 		}
 	}
 	| l_expression '[' expression ']'
 	{	
 		if($1->type == NULL){
-			cout<<"Error at Line "<<line_no<<" :Compiler's fault in error detection\n";
+			cout<<"Error at line "<<line_no<<" :Compiler's fault in error detection\n";
 			exit(0);
 		}
 		if($1->type->child == NULL){
-			cout<<"Error at Line "<<line_no<<" :Not an array\n";
+			cout<<"Error at line "<<line_no<<" :Not an array\n";
 			exit(0);
 		}
 		TYPE* temp = $1->type->child;
 
 		if($3->type->basetype != BASETYPE::INT){
-			cout<<"Error at Line "<<line_no<<" :Array Indices Not an Integer\n";
+			cout<<"Error at line "<<line_no<<" :Array Indices Not an Integer\n";
 			exit(0);
 		}
 		if(identifiers.find((ExpAst*)$1)!=identifiers.end()){
@@ -627,6 +627,19 @@ declaration_list
 
 declaration
 	: type_specifier declarator_list';'
+	| function_definition
+	{
+		$$ = $1 ;
+		CurrentSymbolTable->print();
+		$1->print();
+		cout<<endl<<"\n-----------------------\n";
+
+		// Restoring Environment
+		CurrentSymbolTable = SymbolTableStack.back();
+		SymbolTableStack.pop_back();
+		global_offset = offsetStack.back();
+		offsetStack.pop_back();
+	}
 	;
 
 declarator_list
@@ -634,13 +647,13 @@ declarator_list
 	{
 		bool check=CurrentSymbolTable->AddEntry($1->symbolName,$1);
 		if(!check)
-			cout<<"Error at Line "<<line_no<<" :"<<$1->symbolName<<" Redefined\n";
+			cout<<"Error at line "<<line_no<<" :"<<$1->symbolName<<" Redefined\n";
 	}
 	| declarator_list ',' declarator 
 	{
 		bool check=CurrentSymbolTable->AddEntry($3->symbolName,$3);
 		if(!check)
-			cout<<"Error at Line "<<line_no<<" :"<<$3->symbolName<<" Redefined\n";
+			cout<<"Error at line "<<line_no<<" :"<<$3->symbolName<<" Redefined\n";
 	}
 	;
 
@@ -648,7 +661,7 @@ declarator
 	: IDENTIFIER
 	{
 		if(curr_type->basetype == BASETYPE::VOID){
-			cout<<"Error at Line "<<line_no<<" : Void type declaration not allowed\n";
+			cout<<"Error at line "<<line_no<<" : Void type declaration not allowed\n";
 			exit(0);
 		}
 		$$ = new SymbolTableEntry;
@@ -662,7 +675,13 @@ declarator
 	} 
 	| declarator '[' constant_expression ']' 
 	{
-		TYPE *temp =  new TYPE($1->type,((IntConst*)$3)->getVal());
+		TYPE* temp = validate($3,$3);
+		int fault = 0;
+		if(temp == NULL || temp->basetype == BASETYPE::FLOAT || ((IntConst*)$3)->getVal() < 1){
+			cout<<"Error at line "<<line_no<<" : Array size is not a Positive Integer\n";
+			exit(0);
+		}
+		temp =  new TYPE($1->type,((IntConst*)$3)->getVal());
 		$$ = $1;
 		$$->type = temp;
 		global_offset -= $$->size;

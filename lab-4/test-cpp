@@ -1,6 +1,12 @@
+float test(int x , int y){
+	int z;
+	z = x;
+}
+
+
 int main(int x,int y){
-	int a[5][2];
+	int a[1][2];
 	float z,m,n;
-	z= 5 + "s";
+	z= test(1,2);
 }
 
