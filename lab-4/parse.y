@@ -115,12 +115,12 @@ parameter_list
 	: parameter_declaration 
 	{
 		current_scope = SCOPE::PARAM;
-		CurrentSymbolTable->param_inc();
+		CurrentSymbolTable->arg_type_add(curr_type->basetype);
 	}
 	| parameter_list ',' parameter_declaration 
 	{
 		current_scope = SCOPE::PARAM;
-		CurrentSymbolTable->param_inc();
+		CurrentSymbolTable->arg_type_add(curr_type->basetype);
 	}
 	;
 
@@ -228,6 +228,7 @@ statement
 				cout<<"Error at line "<<line_no<<" :  In call to function "<<$1<<": "<<num1<<" Parameters passed but "<<num<<" required\n";
 				exit(0);
 			}
+			validateBasetypes(GetFuncParamTypes($1),((FunCallStmt*)$$)->expression_list,line_no);
 		}
 	}
 	;
@@ -502,12 +503,14 @@ postfix_expression
 				cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
 				exit(0);
 			}
+
 			int num = GetFuncParamCount($1);
 			int num1 = ((FunCall*)$3)->get_param_count();
 			if(num != num1){
 				cout<<"Error at line "<<line_no<<" :  In call to function "<<$1<<": "<<num1<<" Parameters passed but "<<num<<" required\n";
 				exit(0);
 			}
+			validateBasetypes(GetFuncParamTypes($1),((FunCall*)$$)->expression_list,line_no);
 		}
 	}
 	| l_expression INC_OP
@@ -531,17 +534,21 @@ primary_expression
 	}
 	| l_expression '=' expression
 	{
-		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		TYPE* temp1 = $1->type;
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3) , false);
 		if(temp==NULL){
 			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
-		TYPE* temp1 = $1->type;
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::ASSIGN_INT, $1, $3);
 		else
 			$$ = new Op(OP_TYPE::ASSIGN_FLOAT, $1, $3);
-
+		if(temp1 == NULL)
+		{
+			cout<<"Error at line "<<line_no<<": Error fething type of l_expression\n";
+			exit(0);
+		}
 		$$->type = new TYPE(temp1->basetype);
 	}
 	| INT_CONSTANT

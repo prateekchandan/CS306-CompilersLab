@@ -253,7 +253,7 @@ UNOP_TYPE getTypeCast(TYPE* a){
 	exit(0);
 }
 
-TYPE* ExpAstTypeCast(ExpAst **a,ExpAst **b){
+TYPE* ExpAstTypeCast(ExpAst **a,ExpAst **b , bool flag = true){
 	TYPE* type = validate(*a,*b);
 	if(type==NULL)
 	{
@@ -262,30 +262,40 @@ TYPE* ExpAstTypeCast(ExpAst **a,ExpAst **b){
 	if(type->basetype != BASETYPE::INT && type->basetype != BASETYPE::FLOAT)
 		return NULL;
 
-	if((*a)->type->basetype != type->basetype)
+	if(flag && (*a)->type->basetype != type->basetype)
 		*a = new UnOp(getTypeCast(type), *a);
 
 	if((*b)->type->basetype != type->basetype)
 		*b = new UnOp(getTypeCast(type), *b);
 
-	return type;
+	if(flag)
+		return type;
+	else
+		return  (*a)->type;
 }	
 
-int GetFuncParamCount(string s){
+vector<BASETYPE> GetFuncParamTypes(string s){
 	SymbolTable* temp = CurrentSymbolTable;
 	SymbolTableEntry* ret = temp->GetEntry(s);
 	if(ret!=NULL)
-		return ret->table->get_param_count();
+		return ret->table->get_param_types();
 
 	for (int i = SymbolTableStack.size()-1; i >= 0  ; --i)
 	{
 		temp = SymbolTableStack[i];
 		ret = temp->GetEntry(s);
 		if(ret!=NULL)
-			return ret->table->get_param_count();
+			return ret->table->get_param_types();
 	}
-	return 0;
+	vector<BASETYPE> temp1;
+	return temp1;
 }
+
+//Size of Parameter list for a function
+int GetFuncParamCount(string s){
+	return GetFuncParamTypes(s).size();
+}
+
 
 TYPE* SearchSymbolTable(string s){
 	SymbolTable* temp = CurrentSymbolTable;
@@ -300,4 +310,19 @@ TYPE* SearchSymbolTable(string s){
 			return ret->type;
 	}
 	return NULL;
+}
+
+//validates if the function signature is correct and then typecasts if required
+void validateBasetypes(vector<BASETYPE> b,vector<ExpAst*> &a,int line_no){
+	for(int i=0;i<b.size();++i){
+		// An array check
+		if(a[i]->type==NULL || a[i]->type->child != NULL || (a[i]->type->basetype != BASETYPE::INT && a[i]->type->basetype!= BASETYPE::FLOAT)){
+			cout<<"Error at line "<<line_no<<": Passing non int/float values\n";
+			exit(0);
+		}
+		if(b[i] != a[i]->type->basetype){
+			TYPE temp(b[i]);
+			a[i] = new UnOp(getTypeCast(&temp) , a[i]);
+		}
+	}
 }

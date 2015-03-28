@@ -7,7 +7,6 @@ float test(int x , int y){
 int main(int x,int y){
 	int a,b,c;
 	float z,m,n;
-	printf("yo yo",1,2);
-	b = a+ (z=c);
+	test(a,(a = test(m,b) + c));
 }
 

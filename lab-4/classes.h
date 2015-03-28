@@ -3,6 +3,7 @@
 #include <set>
 #include <map>
 #include <stack>
+#include <cstdlib>
 using namespace std;
 
 
@@ -137,11 +138,10 @@ class SymbolTable
 {
 	string name;
 	map<string,SymbolTableEntry*> Entry;
-	int param_count;
+	vector<BASETYPE> arg_types;
 
 	public:
 	SymbolTable(string n = "Junk"){
-		param_count = 0;
 		name = n;
 	};
 	~SymbolTable();
@@ -169,12 +169,12 @@ class SymbolTable
     	cout<<endl;
 	}
 
-	void param_inc(){
-		param_count++;
-	}
 
-	int get_param_count(){
-		return param_count;
+	void arg_type_add(BASETYPE b){
+		arg_types.push_back(b);
+	}
+	vector<BASETYPE> get_param_types(){
+		return arg_types;
 	}
 };
 
@@ -361,9 +361,9 @@ class FunCallStmt : public StmtAst {
 	
 	protected:
 	Identifier *name;
-	vector<ExpAst*> expression_list;
 	
 	public:
+	vector<ExpAst*> expression_list;
 	FunCallStmt() {}
 	FunCallStmt(Identifier *i){
 		name = i;
@@ -424,9 +424,9 @@ class FunCall : public ExpAst {
 	
 	protected:
 	Identifier *name;
-	vector<ExpAst*> expression_list;
 	
 	public:
+	vector<ExpAst*> expression_list;
 	FunCall() {}
 	FunCall(Identifier *i){
 		name = i;
