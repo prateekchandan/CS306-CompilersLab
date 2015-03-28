@@ -169,7 +169,7 @@ void ArrayRef::print(){
 /********* GLOBALS FOR SYMBOL TABLE ***********/
 SCOPE current_scope = SCOPE::GLOBAL;		// global Scope variable
 
-SymbolTable* CurrentSymbolTable = new SymbolTable;
+SymbolTable* CurrentSymbolTable = new SymbolTable("Global");
 vector<SymbolTable*> SymbolTableStack(1,CurrentSymbolTable);
 vector<int> offsetStack(1,0);
 
@@ -230,5 +230,19 @@ TYPE* ExpAstTypeCast(ExpAst **a,ExpAst **b){
 		*b = new UnOp(getTypeCast(type), *b);
 
 	return type;
-
 }	
+
+TYPE* SearchSymbolTable(string s){
+	SymbolTable* temp = CurrentSymbolTable;
+	SymbolTableEntry* ret = temp->GetEntry(s);
+	if(ret!=NULL)
+		return ret->type;
+	for (int i = SymbolTableStack.size()-1; i >= 0  ; --i)
+	{
+		temp = SymbolTableStack[i];
+		ret = temp->GetEntry(s);
+		if(ret!=NULL)
+			return ret->type;
+	}
+	return NULL;
+}

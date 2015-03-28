@@ -1,9 +1,19 @@
+int z(){
+	int a,b;
+	a=10;
+}
 
+int func(){
+	float x;
+	x = 9.4;
+	return x;
+}
 
 
 int main(int x,int y){
-	int a;
-	float x,y,z,m,n;
-	 a = 5 + 5.6;
+	int a[5][2];
+	float z,m,n;
+	void m;
+	z=func();
 }
 

@@ -67,7 +67,7 @@ fun_declarator
 
 		current_scope = SCOPE::PARAM;
 
-		SymbolTable *temp = new SymbolTable;
+		SymbolTable *temp = new SymbolTable($1);
 		$$->table = temp;
 
 		bool check=CurrentSymbolTable->AddEntry($1,$$);
@@ -78,6 +78,7 @@ fun_declarator
 		CurrentSymbolTable = temp;
 		offsetStack.push_back(global_offset);
 		global_offset = 0;
+
 	} 
 	parameter_list ')'
 	{
@@ -86,6 +87,26 @@ fun_declarator
 	|
 	IDENTIFIER '(' ')' 
 	{
+		$$ = new SymbolTableEntry;
+		$$->symbolName = $1;
+		$$->scope = current_scope;
+		$$->vf = VAR_OR_FUNC::FUNC;
+		$$->type = curr_type;
+
+		current_scope = SCOPE::PARAM;
+
+		SymbolTable *temp = new SymbolTable($1);
+		$$->table = temp;
+
+		bool check=CurrentSymbolTable->AddEntry($1,$$);
+		if(!check)
+			cout<<"Error : Function "<<$1<<" Redefined\n";
+
+		SymbolTableStack.push_back(CurrentSymbolTable);
+		CurrentSymbolTable = temp;
+		offsetStack.push_back(global_offset);
+		global_offset = 0;
+
 		current_scope = SCOPE::LOCAL;
 	}
 	;
@@ -384,11 +405,21 @@ postfix_expression
     | IDENTIFIER '(' ')'
     {
 		$$ = new FunCall(new Identifier());
+		$$->type = SearchSymbolTable($1);
+		if($$->type == NULL){
+			cout<<"Error at Line "<<line_no<<" :"<<$1<<" Undefined\n";
+			exit(0);
+		}
 	}
 	| IDENTIFIER '(' expression_list ')'
 	{
 		$$ = $3;
 		((FunCall*)$$)->set_name(new Identifier($1));
+		$$->type = SearchSymbolTable($1);
+		if($$->type == NULL){
+			cout<<"Error at Line "<<line_no<<" :"<<$1<<" Undefined\n";
+			exit(0);
+		}
 	}
 	| l_expression INC_OP
 	{
@@ -442,10 +473,28 @@ l_expression
 	{
 		$$ = new Identifier($1);
 		identifiers.insert((ExpAst*)$$);
-		$$->type = new TYPE(BASETYPE::INT);
+		$$->type = SearchSymbolTable($1);
+		if($$->type == NULL){
+			cout<<"Error at Line "<<line_no<<" :"<<$1<<" Undefined\n";
+			exit(0);
+		}
 	}
 	| l_expression '[' expression ']'
-	{
+	{	
+		if($1->type == NULL){
+			cout<<"Error at Line "<<line_no<<" :Compiler's fault in error detection\n";
+			exit(0);
+		}
+		if($1->type->child == NULL){
+			cout<<"Error at Line "<<line_no<<" :Not an array\n";
+			exit(0);
+		}
+		TYPE* temp = $1->type->child;
+
+		if($3->type->basetype != BASETYPE::INT){
+			cout<<"Error at Line "<<line_no<<" :Array Indices Not an Integer\n";
+			exit(0);
+		}
 		if(identifiers.find((ExpAst*)$1)!=identifiers.end()){
 			// We are at base case
 			$$ = new ArrayRef((Identifier*)$1);
@@ -456,6 +505,8 @@ l_expression
 			$$ = new ArrayRef((ArrayRef*)$1);
 			((ArrayRef*)$$)->add_index($3);
 		}
+		
+		$$->type = temp;
 	}
 	;
         
@@ -548,6 +599,10 @@ declarator_list
 declarator
 	: IDENTIFIER
 	{
+		if(curr_type->basetype == BASETYPE::VOID){
+			cout<<"Error at Line "<<line_no<<" : Void type declaration not allowed\n";
+			exit(0);
+		}
 		$$ = new SymbolTableEntry;
 		$$->symbolName = $1;
 		$$->scope = current_scope;

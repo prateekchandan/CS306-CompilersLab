@@ -30,7 +30,7 @@ struct TYPE{
 	int size;
 	BASETYPE basetype;
 	TYPE* child;
-	TYPE(){size = -1;}
+	TYPE(){size = -1; child=NULL;}
 	TYPE(BASETYPE type){
 		child = NULL;
 		switch(type){
@@ -117,9 +117,10 @@ struct SymbolTableEntry
 
 class SymbolTable
 {
+	string name;
 	map<string,SymbolTableEntry*> Entry;
 	public:
-	SymbolTable(){};
+	SymbolTable(string n = "Junk"){name = n;};
 	~SymbolTable();
 
 	bool AddEntry(string s,SymbolTableEntry* En1){
@@ -130,8 +131,13 @@ class SymbolTable
 		return false;
 	}
 
+	SymbolTableEntry* GetEntry(string s){
+		if(Entry.find(s)==Entry.end())
+			return NULL;
+		return Entry[s];
+	}
 	void print(){
-		cout<<"\nSymboltable : \n";
+		cout<<"\nSymboltable for "<<name<<": \n";
 		for (map<string,SymbolTableEntry*>::iterator it=Entry.begin(); it!=Entry.end(); ++it)
     		it->second->print();
     	cout<<endl;
