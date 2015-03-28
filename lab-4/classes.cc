@@ -203,10 +203,6 @@ bool operator==(TYPE a , TYPE b){
 // Validates if type check is possible , exits otherwise
 TYPE* validate(ExpAst* a , ExpAst *b){
 	TYPE* temp = is_compatible(a->type,b->type);
-	if(temp == NULL){
-		cout<<"Error at Line "/*<<line_no<<*/" : Incompatible Types\n";
-		exit(0);
-	}
 	return temp;
 }
 
@@ -223,6 +219,10 @@ UNOP_TYPE getTypeCast(TYPE* a){
 
 TYPE* ExpAstTypeCast(ExpAst **a,ExpAst **b){
 	TYPE* type = validate(*a,*b);
+	if(type==NULL)
+	{
+		return NULL;
+	}
 	if((*a)->type->basetype != type->basetype)
 		*a = new UnOp(getTypeCast(type), *a);
 

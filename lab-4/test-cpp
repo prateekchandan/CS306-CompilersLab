@@ -1,19 +1,6 @@
-int z(){
-	int a,b;
-	a=10;
-}
-
-int func(){
-	float x;
-	x = 9.4;
-	return x;
-}
-
-
 int main(int x,int y){
 	int a[5][2];
 	float z,m,n;
-	void m;
-	z=func();
+	z= 5 + "s";
 }
 

@@ -214,7 +214,11 @@ assignment_statement
 	}								
 	|  l_expression '=' expression ';'
 	{
-		validate($1,$3);
+		TYPE* temp = validate($1,$3);
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast while assigning\n";
+			exit(0);
+		}
 		
 		if(!(*($1->type) == *($3->type)))
 			$3 = new UnOp(getTypeCast($1->type), $3);
@@ -255,7 +259,11 @@ equality_expression
 	} 
 	| equality_expression EQ_OP relational_expression
 	{
-		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			exit(0);
+		};
 		
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::EQ_OP_INT, $1, $3);
@@ -266,7 +274,11 @@ equality_expression
 	}
 	| equality_expression NE_OP relational_expression
 	{
-		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			exit(0);
+		};
 		
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::NE_OP_INT, $1, $3);
@@ -284,7 +296,11 @@ relational_expression
 	}
 	| relational_expression '<' additive_expression
 	{
-		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			exit(0);
+		};
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::LT_INT, $1, $3);
 		else
@@ -294,7 +310,11 @@ relational_expression
 	}
 	| relational_expression '>' additive_expression
 	{
-		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			exit(0);
+		};
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::GT_INT, $1, $3);
 		else
@@ -304,7 +324,11 @@ relational_expression
 	}
 	| relational_expression LE_OP additive_expression
 	{
-		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			exit(0);
+		};
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::LE_OP_INT, $1, $3);
 		else
@@ -314,7 +338,11 @@ relational_expression
 	}
 	| relational_expression GE_OP additive_expression
 	{
-		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			exit(0);
+		};
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::GE_OP_INT, $1, $3);
 		else
@@ -332,6 +360,10 @@ additive_expression
 	| additive_expression '+' multiplicative_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			exit(0);
+		}
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::PLUS_INT, $1, $3);
 		else
@@ -342,7 +374,11 @@ additive_expression
 	}
 	| additive_expression '-' multiplicative_expression
 	{
-		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			exit(0);
+		};
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::MINUS_INT, $1, $3);
 		else
@@ -359,7 +395,11 @@ multiplicative_expression
 	}
 	| multiplicative_expression '*' unary_expression
 	{
-		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			exit(0);
+		};
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::MULT_INT, $1, $3);
 		else
@@ -370,7 +410,11 @@ multiplicative_expression
 	}
 	| multiplicative_expression '/' unary_expression
 	{
-		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			exit(0);
+		};
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::DIV_INT, $1, $3);
 		else
@@ -442,7 +486,11 @@ primary_expression
 	}
 	| l_expression '=' expression
 	{
-		TYPE* temp = ExpAstTypeCast(&($1) , &($3));;
+		TYPE* temp = ExpAstTypeCast(&($1) , &($3));
+		if(temp==NULL){
+			cout<<"Error at Line "<<line_no<<" : Unable to typecast\n";
+			exit(0);
+		};
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::ASSIGN_INT, $1, $3);
 		else
