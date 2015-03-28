@@ -8,7 +8,7 @@
 			symbolTableEntry : SymbolTableEntry*;
 
 %type <eAst> expression l_expression equality_expression relational_expression additive_expression multiplicative_expression unary_expression primary_expression postfix_expression logical_and_expression constant_expression expression_list unary_operator
-%type <sAst> translation_unit function_definition compound_statement statement_list statement selection_statement iteration_statement assignment_statement
+%type <sAst> translation_unit function_definition compound_statement statement_list statement selection_statement iteration_statement assignment_statement 
 %type <Int> INT_CONSTANT parameter_list
 %type <Float> FLOAT_CONSTANT
 %type <String> STRING_LITERAL IDENTIFIER
@@ -193,6 +193,42 @@ statement
 	| RETURN expression ';'
 	{
 		$$ = new ReturnSt($2);
+	}
+	| IDENTIFIER '(' ')' ';'
+    {
+		$$ = new FunCallStmt(new Identifier($1));
+
+		// ignore printf
+		if($1 != "printf"){
+			if(SearchSymbolTable($1) == NULL){
+				cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
+				exit(0);
+			}
+			int num = GetFuncParamCount($1);
+			if(num != 0){
+				cout<<"Error at line "<<line_no<<" : In call to function "<<$1<<": 0 Parameters passed but "<<num<<" required\n";
+				exit(0);
+			}
+		}
+	}
+	| IDENTIFIER '(' expression_list ')' ';'
+	{
+		$$ = new FunCallStmt(new Identifier($1));
+		((FunCallStmt*)$$)->set_expression_list(((FunCall*)$3)->get_expression_list());
+
+		// ignore printf
+		if($1 != "printf"){
+			if(SearchSymbolTable($1) == NULL){
+				cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
+				exit(0);
+			}
+			int num = GetFuncParamCount($1);
+			int num1 = ((FunCallStmt*)$$)->get_param_count();
+			if(num != num1){
+				cout<<"Error at line "<<line_no<<" :  In call to function "<<$1<<": "<<num1<<" Parameters passed but "<<num<<" required\n";
+				exit(0);
+			}
+		}
 	}
 	;
 
@@ -439,30 +475,39 @@ postfix_expression
     {
 		$$ = new FunCall(new Identifier());
 		$$->type = SearchSymbolTable($1);
-		if($$->type == NULL){
-			cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
-			exit(0);
-		}
-		int num = GetFuncParamCount($1);
-		if(num != 0){
-			cout<<"Error at line "<<line_no<<" : In call to function "<<$1<<": 0 Parameters passed but "<<num<<" required\n";
-			exit(0);
+
+		// ignore printf
+		if($1 != "printf"){
+			if($$->type == NULL){
+				cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
+				exit(0);
+			}
+			int num = GetFuncParamCount($1);
+			if(num != 0){
+				cout<<"Error at line "<<line_no<<" : In call to function "<<$1<<": 0 Parameters passed but "<<num<<" required\n";
+				exit(0);
+			}
 		}
 	}
 	| IDENTIFIER '(' expression_list ')'
 	{
 		$$ = $3;
 		((FunCall*)$$)->set_name(new Identifier($1));
-		$$->type = SearchSymbolTable($1);
-		if($$->type == NULL){
-			cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
-			exit(0);
-		}
-		int num = GetFuncParamCount($1);
-		int num1 = ((FunCall*)$3)->get_param_count();
-		if(num != num1){
-			cout<<"Error at line "<<line_no<<" :  In call to function "<<$1<<": "<<num1<<" Parameters passed but "<<num<<" required\n";
-			exit(0);
+		$$->type = new TYPE(BASETYPE::INT);
+
+		// ignore printf
+		if($1 != "printf"){
+			$$->type = SearchSymbolTable($1);
+			if($$->type == NULL){
+				cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
+				exit(0);
+			}
+			int num = GetFuncParamCount($1);
+			int num1 = ((FunCall*)$3)->get_param_count();
+			if(num != num1){
+				cout<<"Error at line "<<line_no<<" :  In call to function "<<$1<<": "<<num1<<" Parameters passed but "<<num<<" required\n";
+				exit(0);
+			}
 		}
 	}
 	| l_expression INC_OP
@@ -491,12 +536,13 @@ primary_expression
 			cout<<"Error at line "<<line_no<<" : Unable to typecast\n";
 			exit(0);
 		};
+		TYPE* temp1 = $1->type;
 		if(temp->basetype == BASETYPE::INT)
 			$$ = new Op(OP_TYPE::ASSIGN_INT, $1, $3);
 		else
 			$$ = new Op(OP_TYPE::ASSIGN_FLOAT, $1, $3);
 
-		$$->type = new TYPE(temp->basetype);
+		$$->type = new TYPE(temp1->basetype);
 	}
 	| INT_CONSTANT
 	{

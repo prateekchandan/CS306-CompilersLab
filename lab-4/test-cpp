@@ -5,8 +5,9 @@ float test(int x , int y){
 
 
 int main(int x,int y){
-	int a[1][2];
+	int a,b,c;
 	float z,m,n;
-	z= test(1,2);
+	printf("yo yo",1,2);
+	b = a+ (z=c);
 }
 

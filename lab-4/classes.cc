@@ -83,6 +83,34 @@ void For::print(){
 	cout<<")";
 }
 
+// Print & some other functions for FunCallStmt //
+
+void FunCallStmt::print(){
+	cout<<"(";
+	name->print();
+	for(int i=0; i<expression_list.size(); i++){
+		cout<<" ";
+		expression_list[i]->print();
+	}
+	cout<<")";
+}
+
+void FunCallStmt::set_name(Identifier *i){
+	name = i;
+}
+
+void FunCallStmt::add_expression(ExpAst *e){
+	expression_list.push_back(e);
+}
+
+void FunCallStmt::set_expression_list(vector<ExpAst*> exps){
+	expression_list = exps;
+}
+
+int FunCallStmt::get_param_count(){
+	return expression_list.size();
+}
+
 // Print Function for Op statement //
 
 void Op::print(){
@@ -111,7 +139,7 @@ void Identifier::print(){
 	cout<<"(Id \""<<id<<"\")";
 }
 	
-// Print & some other functions for FunCall //
+// Print & some other helper functions for FunCall //
 
 void FunCall::print(){
 	cout<<"(";
@@ -129,6 +157,14 @@ void FunCall::set_name(Identifier *i){
 
 void FunCall::add_expression(ExpAst *e){
 	expression_list.push_back(e);
+}
+
+int FunCall::get_param_count(){
+	return expression_list.size();
+}
+
+vector<ExpAst*> FunCall::get_expression_list(){
+	return expression_list;
 }
 
 // Print Function for Float Const //

@@ -30,6 +30,7 @@ struct TYPE{
 	int size;
 	BASETYPE basetype;
 	TYPE* child;
+	
 	TYPE(){size = -1; child=NULL;}
 	TYPE(BASETYPE type){
 		child = NULL;
@@ -65,6 +66,23 @@ struct TYPE{
 		else if(basetype == BASETYPE::VOID) cout<<"void";
 		else if(basetype == BASETYPE::INT) cout<<"int";
 		else if(basetype == BASETYPE::FLOAT) cout<<"float";
+	}
+
+	void reverse(){
+		if(child == NULL)
+			return ;
+		vector<int> sizes;
+		TYPE* temp = this;
+		while(temp->child!=NULL){
+			sizes.push_back(temp->size);
+			temp = temp->child;
+		}
+		temp = this;
+		for (int i = sizes.size()-1; i >= 0; --i)
+		{
+			temp->size = sizes[i];
+			temp= temp->child;
+		}
 	}
 };
 
@@ -129,6 +147,9 @@ class SymbolTable
 	~SymbolTable();
 
 	bool AddEntry(string s,SymbolTableEntry* En1){
+		if(En1->type != NULL){
+			En1->type->reverse();
+		}
 		if(Entry.find(s) == Entry.end()){
 			Entry[s] = En1;
 			return true;
@@ -229,6 +250,20 @@ class ExpAst : public abstract_astnode {
 	virtual void print () = 0;
 };
 
+// Declaring Identifier class here itself, as it is required for FunCallStmt
+class Identifier : public ExpAst {
+	
+	protected:
+	string id;
+	
+	public:
+	Identifier() {}
+	Identifier(string s){
+		id = s;
+	}
+	void print();
+};
+
 /////////////////////////////////////////////////////////////////////////////
 
 // Child classes of StmtAst class //
@@ -321,6 +356,24 @@ class For : public StmtAst {
 	}
 	void print();
 };
+
+class FunCallStmt : public StmtAst {
+	
+	protected:
+	Identifier *name;
+	vector<ExpAst*> expression_list;
+	
+	public:
+	FunCallStmt() {}
+	FunCallStmt(Identifier *i){
+		name = i;
+	}
+	void print();
+	void set_name(Identifier *i);
+	void add_expression(ExpAst *e);
+	void set_expression_list(vector<ExpAst*> exps);
+	int get_param_count();	
+};
 /////////////////////////////////////////////////////////////////////////////
 
 // Child classes of ExpAst class //
@@ -367,19 +420,6 @@ class UnOp : public ExpAst {
 	void print();
 };
 
-class Identifier : public ExpAst {
-	
-	protected:
-	string id;
-	
-	public:
-	Identifier() {}
-	Identifier(string s){
-		id = s;
-	}
-	void print();
-};
-
 class FunCall : public ExpAst {
 	
 	protected:
@@ -394,9 +434,8 @@ class FunCall : public ExpAst {
 	void print();
 	void set_name(Identifier *i);
 	void add_expression(ExpAst *e);
-	int get_param_count(){
-		return expression_list.size();
-	}
+	int get_param_count();
+	vector<ExpAst*> get_expression_list();
 };
 
 class FloatConst : public ExpAst {
