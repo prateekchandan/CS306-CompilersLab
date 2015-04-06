@@ -297,17 +297,31 @@ int GetFuncParamCount(string s){
 }
 
 
-TYPE* SearchSymbolTable(string s){
+TYPE* SearchSymbolTable(string s,int line_no,int type=1){
 	SymbolTable* temp = CurrentSymbolTable;
 	SymbolTableEntry* ret = temp->GetEntry(s);
-	if(ret!=NULL)
+	if(ret!=NULL){
+		if(type != ret->vf)
+		{
+			cout<<"Error at line "<<line_no<<" : "<<s<<" is a "<<(type==0?"function":"variable");
+			cout<<" and not "<<(type==1?"function":"variable")<<"\n";
+			exit(0);
+		}
 		return ret->type;
+	}
 	for (int i = SymbolTableStack.size()-1; i >= 0  ; --i)
 	{
 		temp = SymbolTableStack[i];
 		ret = temp->GetEntry(s);
-		if(ret!=NULL)
+		if(ret!=NULL){
+			if(type != ret->vf)
+			{
+				cout<<"Error at line "<<line_no<<" : "<<s<<" is a "<<(type==0?"function":"variable");
+				cout<<" and not "<<(type==1?"function":"variable")<<"\n";
+				exit(0);
+			}
 			return ret->type;
+		}
 	}
 	return NULL;
 }

@@ -200,7 +200,7 @@ statement
 
 		// ignore printf
 		if($1 != "printf"){
-			if(SearchSymbolTable($1) == NULL){
+			if(SearchSymbolTable($1,line_no) == NULL){
 				cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
 				exit(0);
 			}
@@ -218,7 +218,7 @@ statement
 
 		// ignore printf
 		if($1 != "printf"){
-			if(SearchSymbolTable($1) == NULL){
+			if(SearchSymbolTable($1,line_no) == NULL){
 				cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
 				exit(0);
 			}
@@ -475,7 +475,7 @@ postfix_expression
     | IDENTIFIER '(' ')'
     {
 		$$ = new FunCall(new Identifier());
-		$$->type = SearchSymbolTable($1);
+		$$->type = SearchSymbolTable($1,line_no);
 
 		// ignore printf
 		if($1 != "printf"){
@@ -498,7 +498,7 @@ postfix_expression
 
 		// ignore printf
 		if($1 != "printf"){
-			$$->type = SearchSymbolTable($1);
+			$$->type = SearchSymbolTable($1,line_no);
 			if($$->type == NULL){
 				cout<<"Error at line "<<line_no<<" : "<<$1<<" Undefined\n";
 				exit(0);
@@ -574,7 +574,7 @@ l_expression
 	{
 		$$ = new Identifier($1);
 		identifiers.insert((ExpAst*)$$);
-		$$->type = SearchSymbolTable($1);
+		$$->type = SearchSymbolTable($1,line_no,0);
 		if($$->type == NULL){
 			cout<<"Error at line "<<line_no<<" :"<<$1<<" Undefined\n";
 			exit(0);
