@@ -141,6 +141,8 @@ class SymbolTable
 	vector<BASETYPE> arg_types;
 
 	public:
+	TYPE* returnType;
+		
 	SymbolTable(string n = "Junk"){
 		name = n;
 	};

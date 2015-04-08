@@ -69,6 +69,8 @@ fun_declarator
 
 		SymbolTable *temp = new SymbolTable($1);
 		$$->table = temp;
+		
+		temp->returnType = curr_type;
 
 		bool check=CurrentSymbolTable->AddEntry($1,$$);
 		if(!check)
@@ -97,7 +99,7 @@ fun_declarator
 
 		SymbolTable *temp = new SymbolTable($1);
 		$$->table = temp;
-
+		temp->returnType = curr_type;
 		bool check=CurrentSymbolTable->AddEntry($1,$$);
 		if(!check)
 			cout<<"Error at line "<<line_no<<" : Function "<<$1<<" Redefined\n";
@@ -192,6 +194,20 @@ statement
 	}
 	| RETURN expression ';'
 	{
+		TYPE* temp = is_compatible(CurrentSymbolTable->returnType,$2->type);
+		TYPE* rtype = CurrentSymbolTable->returnType;
+		
+		if(rtype->child==NULL && rtype->basetype==BASETYPE::VOID){
+			cout<<"Error at line "<<line_no<<" : Return not allowed for Void functions\n";
+			exit(0);
+		}
+		if(temp==NULL || (temp->basetype != BASETYPE::INT && temp->basetype != BASETYPE::FLOAT)){
+			cout<<"Error at line "<<line_no<<" : Incompatible Return Type\n";
+			exit(0);
+		}
+		if(rtype->basetype != $2->type->basetype)
+			$2 = new UnOp(getTypeCast(rtype),$2);
+
 		$$ = new ReturnSt($2);
 	}
 	| IDENTIFIER '(' ')' ';'
