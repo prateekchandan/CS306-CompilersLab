@@ -18,17 +18,17 @@ string reg_names[] = {"eax", "ebx", "ecx", "edx", "esp", "ebp"};
 // Class for maintenance of registers and their mappings
 class reg_maintainer {
 	
-	vector<Reg> free_registers;					// Stack of free registers
+	set<Reg> free_registers;					// Stack of free registers
 	map<Reg,SymbolTableEntry*> assigned_to; 	// Map of register to the variable that it holds
 	map<Reg,string> type_of;					// Map of register to the type of variable it holds
 	
 	public:
 	// Constructor initializes the free regs stack
 	reg_maintainer(){
-		free_registers.push_back(eax);
-		free_registers.push_back(ebx);
-		free_registers.push_back(ecx);
-		free_registers.push_back(edx);
+		free_registers.insert(eax);
+		free_registers.insert(ebx);
+		free_registers.insert(ecx);
+		free_registers.insert(edx);
 		type_of[eax] = "";
 		type_of[ebx] = "";
 		type_of[ecx] = "";
@@ -40,9 +40,9 @@ reg_maintainer rm; 			// The register maintainer
 vector<string> code;		// Vector of lines for the generated code
 int line_num = 1;			// Line number where the next instruction of the code would come
 
-//////////////////////
-// Helper Functions //
-//////////////////////
+////////////////////////////
+///// Helper Functions /////
+////////////////////////////
 
 void add_line_to_code(string s, bool stmt_start){
 	// Add a line_number tag only at the start of a statement
