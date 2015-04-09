@@ -36,6 +36,7 @@ translation_unit
 		CurrentSymbolTable = SymbolTableStack.back();
 		SymbolTableStack.pop_back();
 		global_offset = offsetStack.back();
+		offset_multiplier = 1;
 		offsetStack.pop_back();
 	}
 	| translation_unit function_definition
@@ -55,6 +56,7 @@ translation_unit
 		CurrentSymbolTable = SymbolTableStack.back();
 		SymbolTableStack.pop_back();
 		global_offset = offsetStack.back();
+		offset_multiplier = 1;
 		offsetStack.pop_back();
 
 	}
@@ -91,12 +93,14 @@ fun_declarator
 		SymbolTableStack.push_back(CurrentSymbolTable);
 		CurrentSymbolTable = temp;
 		offsetStack.push_back(global_offset);
-		global_offset = 0;
+		global_offset = 4;
 
 	} 
 	parameter_list ')'
 	{
 		current_scope = SCOPE::LOCAL;
+		global_offset = -8;
+		offset_multiplier = -1;
 	}
 	|
 	IDENTIFIER '(' ')' 
@@ -119,7 +123,8 @@ fun_declarator
 		SymbolTableStack.push_back(CurrentSymbolTable);
 		CurrentSymbolTable = temp;
 		offsetStack.push_back(global_offset);
-		global_offset = 0;
+		global_offset = -8;
+		offset_multiplier = -1;
 
 		current_scope = SCOPE::LOCAL;
 	}
@@ -719,7 +724,9 @@ declaration
 		CurrentSymbolTable = SymbolTableStack.back();
 		SymbolTableStack.pop_back();
 		global_offset = offsetStack.back();
+		offset_multiplier = -1;
 		offsetStack.pop_back();
+
 	}
 	;
 
@@ -752,7 +759,7 @@ declarator
 		$$->size = curr_type->size;
 		$$->vf = VAR_OR_FUNC::VAR;
 		$$->offset = global_offset;
-		global_offset += $$->size;
+		global_offset += $$->size * offset_multiplier;
 	} 
 	| declarator '[' constant_expression ']' 
 	{
@@ -765,8 +772,8 @@ declarator
 		temp =  new TYPE($1->type,((IntConst*)$3)->getVal());
 		$$ = $1;
 		$$->type = temp;
-		global_offset -= $$->size;
+		global_offset -= $$->size * offset_multiplier;
 		$$->size *=  temp->size;
-		global_offset += $$->size;
+		global_offset += $$->size * offset_multiplier;
 	}
 	;

@@ -10,7 +10,8 @@ vector<SymbolTable*> SymbolTableStack(1,CurrentSymbolTable);	// Stack of symbol 
 vector<int> offsetStack(1,0);									// Stack of their corresponding current offsets
 
 TYPE* curr_type;												// Type of variable whose decln. is currently being parsed
-int global_offset = 0;											// Current offset of the global symbol table (Initially 0)
+int global_offset = 4;											// Current offset of the global symbol table (Initially 0)
+int offset_multiplier = 1;										// Value is 1 for params and -1 for funstions
 
 ///////////////////////////////////////////////////////////////////////////////
 /////////// HELPER FUNCTIONS FOR TYPE CHECKING ////////////////////////////////
