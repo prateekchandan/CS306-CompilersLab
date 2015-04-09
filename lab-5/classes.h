@@ -4,180 +4,11 @@
 #include <map>
 #include <stack>
 #include <cstdlib>
+#include <string>
+#include <assert.h>
 using namespace std;
 
-
-
-// Classes and global variables related to symbol table maintenance
-enum SCOPE{
-	GLOBAL = 0,
-	LOCAL = 1,
-	PARAM = 2,
-};
-
-enum VAR_OR_FUNC{
-	VAR = 0,
-	FUNC = 1
-};
-
-enum BASETYPE{
-	VOID = 0,
-	INT = 1,
-	FLOAT = 2,
-	STRING = 3
-};
-
-struct TYPE{
-	int size;
-	BASETYPE basetype;
-	TYPE* child;
-	
-	TYPE(){size = -1; child=NULL;}
-	TYPE(BASETYPE type){
-		child = NULL;
-		switch(type){
-			case BASETYPE::VOID: // VOID
-				size = 0;
-				basetype = BASETYPE::VOID;
-				break;
-			case BASETYPE::INT: // INT
-				size = 4;
-				basetype = BASETYPE::INT;
-				break;
-			case BASETYPE::FLOAT: // FLOAT
-				size = 4;
-				basetype = BASETYPE::FLOAT;
-				break;
-			default:
-				basetype = type;
-				size = 0;
-		}
-	}
-	TYPE(TYPE* c,int s){
-		child = c;
-		size = s;
-	}
-
-	void print(){
-		if(child != NULL){
-			cout<<"array("<<size<<",";
-				child->print();
-			cout<<")";
-		}
-		else if(basetype == BASETYPE::VOID) cout<<"void";
-		else if(basetype == BASETYPE::INT) cout<<"int";
-		else if(basetype == BASETYPE::FLOAT) cout<<"float";
-	}
-
-	void reverse(){
-		if(child == NULL)
-			return ;
-		vector<int> sizes;
-		TYPE* temp = this;
-		while(temp->child!=NULL){
-			sizes.push_back(temp->size);
-			temp = temp->child;
-		}
-		temp = this;
-		for (int i = sizes.size()-1; i >= 0; --i)
-		{
-			temp->size = sizes[i];
-			temp= temp->child;
-		}
-	}
-};
-
-class SymbolTable;
-
-// symbolTable Entry class
-struct SymbolTableEntry
-{
-	string symbolName;
-	VAR_OR_FUNC vf;
-	SCOPE scope;
-	TYPE *type;
-	int size;
-	int offset;
-	SymbolTable* table;
-
-	SymbolTableEntry(){
-		table = NULL;
-		size = 0; 
-		offset=0;
-		type =NULL;
-	};
-
-	~SymbolTableEntry(){};
-
-	void print(){
-		cout<<symbolName<<"\t";
-		switch(scope){
-			case SCOPE::LOCAL : cout<<"local"; break;
-			case SCOPE::PARAM : cout<<"param"; break;
-			case SCOPE::GLOBAL : cout<<"global"; break;
-		}
-		
-		cout<<" size:"<<size;
-		cout<<"\t";
-		switch(vf){
-			case VAR_OR_FUNC::VAR : cout<<"variable"; break;
-			case VAR_OR_FUNC::FUNC : cout<<"function"; break;
-		}
-		cout<<"\t";
-		cout<<offset;
-		cout<<"\t";
-		
-		if(type!=NULL)
-			type->print();
-		
-		cout<<endl;
-	}	
-};
-
-class SymbolTable
-{
-	string name;
-	map<string,SymbolTableEntry*> Entry;
-	vector<BASETYPE> arg_types;
-
-	public:
-	SymbolTable(string n = "Junk"){
-		name = n;
-	};
-	~SymbolTable();
-
-	bool AddEntry(string s,SymbolTableEntry* En1){
-		if(En1->type != NULL){
-			En1->type->reverse();
-		}
-		if(Entry.find(s) == Entry.end()){
-			Entry[s] = En1;
-			return true;
-		}
-		return false;
-	}
-
-	SymbolTableEntry* GetEntry(string s){
-		if(Entry.find(s)==Entry.end())
-			return NULL;
-		return Entry[s];
-	}
-	void print(){
-		cout<<"\nSymboltable for "<<name<<": \n";
-		for (map<string,SymbolTableEntry*>::iterator it=Entry.begin(); it!=Entry.end(); ++it)
-    		it->second->print();
-    	cout<<endl;
-	}
-
-
-	void arg_type_add(BASETYPE b){
-		arg_types.push_back(b);
-	}
-	vector<BASETYPE> get_param_types(){
-		return arg_types;
-	}
-};
-
+#define INF 1000000000
 
 /***********************************************
 ************* DEFINITIONS FOR AST **************
@@ -222,9 +53,11 @@ enum UNOP_TYPE{
 };
 
 // Abstract class for a node in the AST /////////////////////////////////////
+
 class abstract_astnode {
 	public:
 	virtual void print () = 0;
+	virtual void gen_code() = 0;
 	//virtual std::string generate_code(const symbolTable&) = 0;
 	//virtual basic_types getType() = 0;
 	//virtual bool checkTypeofAST() = 0;
@@ -235,47 +68,70 @@ class abstract_astnode {
 	private:
 	//typeExp astnode_type;
 };
-/////////////////////////////////////////////////////////////////////////////
 
+/////////////////////////////////////////////////////////////////////////////
 // These are the high-level classes inherited from the abstract node class //
 
 class StmtAst : public abstract_astnode {
 	public:
 	virtual void print () = 0;
+	virtual void gen_code() = 0;
 };
 
 class ExpAst : public abstract_astnode {
 	public:
-		TYPE* type;
+	TYPE* type;
+	int reg_addr = -1;
+	int mem_addr = INF;
+	bool is_lval = false;
+	bool is_leaf = false;
+	
 	virtual void print () = 0;
+	virtual void gen_code() = 0;
 };
+/////////////////////////////////////////////////////////////////////////////
 
-// Declaring Identifier class here itself, as it is required for FunCallStmt
+// Declaring Identifier class here itself, as it is required for FunCallStmt //
+
 class Identifier : public ExpAst {
 	
 	protected:
 	string id;
 	
 	public:
-	Identifier() {}
+	Identifier(){
+		is_lval = true;
+		is_leaf = true;
+	}
 	Identifier(string s){
+		is_lval = true;
+		is_leaf = true;
 		id = s;
 	}
+	
 	void print();
+	void gen_code();
 };
 
 /////////////////////////////////////////////////////////////////////////////
-
-// Child classes of StmtAst class //
+// Child classes of StmtAst class ///////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 
 class BlockAst : public StmtAst {
 	protected:
 	vector<StmtAst*> statements;
+	SymbolTable* curr;
 	
 	public:
-	BlockAst() {}
+	BlockAst(){}
+	BlockAst(SymbolTable* s){
+		curr = s;
+	}
 	void print();
 	void add_statement(StmtAst *e);
+	//int get_stmtlist_length();
+	//StmtAst* get_stmt_i(int i);
+	void gen_code();
 };
 
 class Ass : public StmtAst {
@@ -291,6 +147,7 @@ class Ass : public StmtAst {
 		right = r;
 	}
 	void print();
+	void gen_code();
 };
 	
 class ReturnSt : public StmtAst {
@@ -304,6 +161,7 @@ class ReturnSt : public StmtAst {
 		exp = r;
 	}
 	void print();
+	void gen_code();	
 };
 
 class If : public StmtAst {
@@ -321,6 +179,7 @@ class If : public StmtAst {
 		statement2 = s2;
 	}
 	void print();
+	void gen_code();	
 };
 
 class While : public StmtAst {
@@ -336,6 +195,7 @@ class While : public StmtAst {
 		statement = s;
 	}
 	void print();
+	void gen_code();	
 };
 
 class For : public StmtAst {
@@ -355,6 +215,7 @@ class For : public StmtAst {
 		statement = st;
 	}
 	void print();
+	void gen_code();	
 };
 
 class FunCallStmt : public StmtAst {
@@ -373,10 +234,12 @@ class FunCallStmt : public StmtAst {
 	void add_expression(ExpAst *e);
 	void set_expression_list(vector<ExpAst*> exps);
 	int get_param_count();	
+	void gen_code();	
 };
-/////////////////////////////////////////////////////////////////////////////
 
-// Child classes of ExpAst class //
+/////////////////////////////////////////////////////////////////////////////
+// Child classes of ExpAst class ///////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
  
 class Op : public ExpAst {
 	
@@ -393,6 +256,7 @@ class Op : public ExpAst {
 		right = r;
 	}
 	void print();
+	void gen_code();	
 };
 
 class UnOp : public ExpAst {
@@ -418,6 +282,7 @@ class UnOp : public ExpAst {
 	}
 	void set_expression(ExpAst *e);
 	void print();
+	void gen_code();	
 };
 
 class FunCall : public ExpAst {
@@ -436,6 +301,7 @@ class FunCall : public ExpAst {
 	void add_expression(ExpAst *e);
 	int get_param_count();
 	vector<ExpAst*> get_expression_list();
+	void gen_code();	
 };
 
 class FloatConst : public ExpAst {
@@ -444,13 +310,17 @@ class FloatConst : public ExpAst {
 	float val;
 	
 	public:
-	FloatConst() {}
+	FloatConst(){
+		is_leaf = true;
+	}
 	FloatConst(float f){
+		is_leaf = true;
 		val = f;
 		type = new TYPE(BASETYPE::FLOAT);
 	}
 	void print();
-	float getVal(){return val;}
+	float getVal() { return val; }
+	void gen_code();	
 };
 
 class IntConst : public ExpAst {
@@ -459,13 +329,17 @@ class IntConst : public ExpAst {
 	int val;
 	
 	public:
-	IntConst() {}
+	IntConst(){
+		is_leaf = true;
+	}
 	IntConst(int i){
+		is_leaf = true;
 		val = i;
 		type = new TYPE(BASETYPE::INT);
 	}
 	void print();
-	int getVal(){return val;}
+	int getVal() { return val; }
+	void gen_code();
 };
 
 class StringConst : public ExpAst {
@@ -474,13 +348,17 @@ class StringConst : public ExpAst {
 	string val;
 	
 	public:
-	StringConst() {}
+	StringConst(){
+		is_leaf = true;
+	}
 	StringConst(string s){
+		is_leaf = true;
 		val = s;
 		type = new TYPE(BASETYPE::STRING);
 	}
 	void print();
-	string getVal(){return val;}
+	string getVal() { return val; }
+	void gen_code();
 };
 
 class ArrayRef : public ExpAst {
@@ -490,8 +368,13 @@ class ArrayRef : public ExpAst {
 	vector<ExpAst*> indices;
 	
 	public:
-	ArrayRef() {}
+	ArrayRef(){
+		is_lval = true;
+		is_leaf = true;
+	}
 	ArrayRef(Identifier *i){
+		is_lval = true;
+		is_leaf = true;
 		name = i;
 	}
 	ArrayRef(ArrayRef* child){
@@ -500,8 +383,5 @@ class ArrayRef : public ExpAst {
 	}
 	void add_index(ExpAst *e);
 	void print();
+	void gen_code();
 };
-
-
-
-

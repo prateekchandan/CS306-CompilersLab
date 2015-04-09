@@ -9,15 +9,9 @@ graph:
 lex.cc: lex.l Scanner.ih 
 	@rm -rf Scanner*
 	flexc++ lex.l; 
-#	sed -i '/include/a #include "Parserbase.h"' Scanner.ih; 
 
 parse.cc: parse.y Parser.ih Parser.h Parserbase.h
-	bisonc++  parse.y; 
-#	sed -i '/insert preincludes/a #include "classes.h"' Parserbase.h;
-#	sed -i '/include "Parser.h"/a #include "classes.cc"' Parser.ih;
-#	bisonc++   --construction -V parse.y; 
-#	sed -i '/ifndef/a #include "tree_util.hh"' Parserbase.h;
-#	sed -i '/ifndef/a #include "tree.hh"' Parserbase.h;
+	bisonc++  parse.y;
 	./sedscript
      
 

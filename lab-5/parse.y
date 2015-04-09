@@ -22,10 +22,16 @@ translation_unit
 	function_definition 
 	{
 		$$ = $1 ;
-		CurrentSymbolTable->print();
+		
 		$1->print();
-		cout<<endl<<"\n-----------------------\n";
-
+		$1->gen_code();
+		
+		// Print Symbol table when print_symbol_table is enabled
+		if(print_symbol_table){
+			CurrentSymbolTable->print();
+			cout<<endl<<"\n-----------------------\n";
+		}
+		
 		// Restoring Environment
 		CurrentSymbolTable = SymbolTableStack.back();
 		SymbolTableStack.pop_back();
@@ -35,9 +41,15 @@ translation_unit
 	| translation_unit function_definition
 	{
 		$$ = $1 ;
-		CurrentSymbolTable->print();
+		
 		$2->print();
-		cout<<endl<<"\n-----------------------\n";
+		$2->gen_code();
+		
+		// Print Symbol table when print_symbol_table is enabled
+		if(print_symbol_table){
+			CurrentSymbolTable->print();
+			cout<<endl<<"\n-----------------------\n";
+		}
 		
 		// Restoring Environment
 		CurrentSymbolTable = SymbolTableStack.back();
@@ -70,7 +82,7 @@ fun_declarator
 		SymbolTable *temp = new SymbolTable($1);
 		$$->table = temp;
 
-		bool check=CurrentSymbolTable->AddEntry($1,$$);
+		bool check = CurrentSymbolTable->AddEntry($1,$$);
 		if(!check)
 			cout<<"Error at line "<<line_no<<" : Function "<<$1<<" Redefined\n";
 
@@ -112,7 +124,7 @@ fun_declarator
 	;
 
 parameter_list
-	: parameter_declaration 
+	: parameter_declaration
 	{
 		current_scope = SCOPE::PARAM;
 		CurrentSymbolTable->arg_type_add(curr_type->basetype);
@@ -147,7 +159,7 @@ constant_expression
 compound_statement
 	: '{' '}' 
 	{
-		$$ = new BlockAst();
+		$$ = new BlockAst(CurrentSymbolTable);
 	}
 	| '{'  statement_list '}' 
 	{
@@ -282,7 +294,7 @@ equality_expression
 	: relational_expression
 	{
 		$$ = $1;
-	} 
+	}
 	| equality_expression EQ_OP relational_expression
 	{
 		TYPE* temp = ExpAstTypeCast(&($1) , &($3));

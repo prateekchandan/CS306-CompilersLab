@@ -2,7 +2,10 @@
 
 sed -i '/include/a #include "Parserbase.h"' Scanner.ih;
 sed -i '/insert preincludes/a #include "classes.h"' Parserbase.h;
+sed -i '/insert preincludes/a #include "symbol_table.h"' Parserbase.h;
 sed -i '/include "Parser.h"/a #include "classes.cc"' Parser.ih;
+sed -i '/include "Parser.h"/a #include "symbol_table.cc"' Parser.ih;
+sed -i '/include "Parser.h"/a #include "gen_code.cc"' Parser.ih;
 
 sed -i '\|STYPE__     d_val__;| d 
 ' Parserbase.h
