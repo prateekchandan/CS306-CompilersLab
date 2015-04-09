@@ -107,6 +107,7 @@ class SymbolTable
 	vector<BASETYPE> arg_types;
 
 	public:
+	TYPE* returnType;
 	// Constructors and desctructor of this class
 	SymbolTable(string n = "Junk"){
 		name = n;
