@@ -103,6 +103,7 @@ fun_declarator
 	parameter_list ')'
 	{
 		current_scope = SCOPE::LOCAL;
+		CurrentSymbolTable->return_offset = global_offset;
 		global_offset = -8;
 		offset_multiplier = -1;
 	}
@@ -127,6 +128,7 @@ fun_declarator
 		SymbolTableStack.push_back(CurrentSymbolTable);
 		CurrentSymbolTable = temp;
 		offsetStack.push_back(global_offset);
+		CurrentSymbolTable->return_offset = global_offset;
 		global_offset = -8;
 		offset_multiplier = -1;
 

@@ -175,12 +175,17 @@ string make_instr(string c, float f){
 }
 
 string make_instr(string c, string t){
-	string s = c+"("+t+");";
+	string s = c+"(\""+t+"\");";
 	return s;
 }
 
 string make_instr(string c, char ch){
 	string s = c+"('"+ch+"');";
+	return s;
+}
+
+string make_instr(string c){
+	string s = c+"();";
 	return s;
 }
 
@@ -196,8 +201,9 @@ void BlockAst::gen_code(){
 }
 
 void Ass::gen_code(){
-	if(left==NULL && right==NULL) return;		// Empty Statement
-	//assert(left->is_lval);						// Just check that LHS is an lval
+	if(left==NULL && right==NULL) return;					// Empty Statement
+	assert(left->is_identifier || left->is_arrayref);		// Just check that LHS is an lval
+	
 	left->gen_code();
 	right->gen_code();
 }
@@ -235,23 +241,19 @@ void FunCallStmt::gen_code(){
 /////////////////////////////////////////////////////////////////////////////
 
 void Identifier::gen_code(){
-	SymbolTableEntry *STentry = currentST->GetEntry(id);	// Get symbol table entry
-	int stack_offset = STentry->offset;						// Find its offset wrt ebp
-	assert(STentry->type->child == NULL);					// Check that it is not an array type
+
+	assert(type->child == NULL);					// Check that it is not an array type	
+	Reg r = rm.get_top();							// Get the top-most free register
 	
-	Reg free_reg = rm.get_top();							// Get the top-most free register
-	
-	if(STentry->type->basetype == BASETYPE::INT){			// If type is int, use loadi
-		add_line_to_code(make_instr("loadi",make_instr("ind",ebp,stack_offset),free_reg), true);
-		rm.type_of[free_reg] = "int";
+	if(type->basetype == BASETYPE::INT){			// If type is int, use loadi
+		add_line_to_code(make_instr("loadi",make_instr("ind",ebp,mem_offset),r), true);
 	}
-	else if(STentry->type->basetype == BASETYPE::FLOAT){	// If type is float, use loadf
-		add_line_to_code(make_instr("loadf",make_instr("ind",ebp,stack_offset),free_reg), true);
-		rm.type_of[free_reg] = "float";
+	else if(type->basetype == BASETYPE::FLOAT){	// If type is float, use loadf
+		add_line_to_code(make_instr("loadf",make_instr("ind",ebp,mem_offset),r), true);
 	}
 	else assert(0);
 	
-	reg_addr = free_reg;									// Set the address attribute of the node
+	reg_addr = r;									// Set the address attribute of the node
 	return;
 }
 
@@ -472,6 +474,7 @@ void UnOp::gen_code(){
 		
 		Reg r = rm.get_top();
 		string s;
+		
 		if(op_type==UMINUS_INT) s = make_instr("muli",-1,r);
 		else s = make_instr("mulf",-1.0f,r);
 		add_line_to_code(s,true);
@@ -484,6 +487,7 @@ void UnOp::gen_code(){
 		
 		Reg r = rm.get_top();
 		string s;
+		
 		if(op_type==TO_INT) s = make_instr("floatToint",r);
 		else s = make_instr("intTofloat",r);
 		add_line_to_code(s,true);
@@ -491,7 +495,38 @@ void UnOp::gen_code(){
 		return;
 	}
 	if(op_type==PP_INT || op_type==PP_FLOAT){
+		exp->gen_code();
 		
+		Reg r = rm.get_top();
+		string s;
+		string dtype = (op_type==PP_INT) ? "i" : "f";
+		
+		// If lhs is identifier, then r contains its value in it
+		if(exp->is_identifier){
+			if(op_type==PP_INT) s = make_instr("addi",1,r);
+			else s = make_instr("addf",1.0f,r);
+			add_line_to_code(s,true);
+			s = make_instr("store"+dtype, r, make_instr("ind",ebp,exp->mem_offset));
+			add_line_to_code(s,true);
+		}
+		// But if lhs is arrayref, then r now contains its memory address (viz. pointer)
+		else if(exp->is_arrayref){
+			rm.pop_top();											// pop register r (contains mem. pointer)
+			Reg l = rm.get_top();									// get top register l
+			rm.push_top(r);											// place back r on top
+			s = make_instr("load"+dtype, make_instr("ind",r), l);	// l <- *(r)
+			add_line_to_code(s,true);
+			if(op_type==PP_INT) s = make_instr("addi",1,r);			// l <- l + 1
+			else s = make_instr("addf",1.0f,r);
+			add_line_to_code(s,true);
+			s = make_instr("store"+dtype,l, make_instr("ind",r));	// *(r) <- l
+			add_line_to_code(s,true);
+			s = make_instr("move",l,r);								// r <- l (preparing value in r for return from this node)
+			add_line_to_code(s,true);
+		}
+		else assert(0);
+		
+		reg_addr = r;
 		return;
 	}
 	if(op_type==NOT){
@@ -504,35 +539,97 @@ void UnOp::gen_code(){
 		
 		s = make_instr("cmp"+dtype,0,r);
 		add_line_to_code(s,true);
-		s = make_instr("je",line_num+3);
+		s = make_instr("je",to_string(line_num+3));
 		add_line_to_code(s,true);
 		s = (!dtype.compare("i")) ? make_instr("move",0,r) : make_instr("move",0.0f,r);
 		add_line_to_code(s,true);
-		s = make_instr("j",line_num+2);
+		s = make_instr("j",to_string(line_num+2));
 		add_line_to_code(s,true);
 		s = (!dtype.compare("i")) ? make_instr("move",1,r) : make_instr("move",1.0f,r);
 		add_line_to_code(s,true);
+		reg_addr = r;
 		return;
 	}
 }
 
 void FunCall::gen_code(){
-	// evaluate fun call as an expression
 	
-	// evaluate right to left and push onto the stack
+	Reg r = rm.get_top();				// Top register ( will have to evaluate asnwer in this)
+	string s;
+	string arg_types = "";				// for storing list of types of assignments
+	int ret_type = type->basetype;		// return type of this function expression
+	assert(ret_type!=BASETYPE::VOID);
+	string dtype = (ret_type==BASETYPE::INT) ? "i" : "f";
+	
+	////////////////////////////////////////////////////
+	// Save the registers which are in use (TODO) //////
+	////////////////////////////////////////////////////
+	
+	// Push space for return value
+	s = make_instr("push"+dtype,1);
+	add_line_to_code(s,true);
+	
+	// Evaluate arguments from right to left and push onto the stack
 	for(int i=expression_list.size(); i>=0; i--){
-		expression_list[i]->gen_code();
+		if(expression_list[i]->is_const){
+			s = make_instr("push"+dtype,expression_list[i]->vali);
+			arg_types = arg_types+dtype;
+		}
+		else{	
+			expression_list[i]->gen_code();
+			s = make_instr("push"+dtype,r);
+			arg_types = arg_types+dtype;
+		}
+		add_line_to_code(s,true);
 	}
+	
+	// Push the static link (TODO)
+	s = make_instr("pushi",0);
+	add_line_to_code(s,true);
+	
+	// Make a call to the function
+	s = make_instr(name->get_id());
+	add_line_to_code(s,true);
+	
+	// Pop static link & parameters from the stack (initial count=1 is for popping the static link)
+	char mode = 'i';							// 'i' means int, 'f' means float;
+	int count = 1;								// Count of consecutive parameters on the stack of same mode
+	for(int i=arg_types.length()-1; i>=0; i--){
+		if(s[i]==mode) count++;
+		else{
+			if(count!=0){
+				s = make_instr("pop"+mode,count);
+				add_line_to_code(s,true);
+			}
+			mode = s[i];
+			count = 1;
+		}
+	}
+	if(count!=0){
+		s = make_instr("pop"+mode,count);
+		add_line_to_code(s,true);
+	}
+	
+	// Pick up the return value from stack and pop it off
+	if(ret_type==BASETYPE::INT){
+		s = make_instr("load"+dtype,make_instr("ind",esp),r);
+		add_line_to_code(s,true);
+		s = make_instr("pop"+dtype,1);
+		add_line_to_code(s,true);
+	}
+
+	////////////////////////////////////////////////////
+	// Load the registers which were in use (TODO) /////
+	////////////////////////////////////////////////////
+	
+	reg_addr = r;
+	return;
 }
 
-void FloatConst::gen_code(){
-}
-
-void IntConst::gen_code(){
-}
-
-void StringConst::gen_code(){
-}
+void FloatConst::gen_code(){ assert(0);}
+void IntConst::gen_code(){ assert(0);}
+void StringConst::gen_code(){ /*assert(0);*/}
 
 void ArrayRef::gen_code(){
+	
 }

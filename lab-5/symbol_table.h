@@ -108,6 +108,8 @@ class SymbolTable
 
 	public:
 	TYPE* returnType;
+	int return_offset;
+	
 	// Constructors and desctructor of this class
 	SymbolTable(string n = "Junk"){
 		name = n;
