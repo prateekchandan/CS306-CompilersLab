@@ -27,16 +27,6 @@ void BlockAst::print(){
 	cout<<"])";
 }
 
-/*	
-int get_stmtlist_length(){
-	return statements.size();
-}
-
-StmtAst* get_stmt_i(int i){
-	return statements[i];
-}
-*/
-
 // Print Function for Assignment statement //
 
 void Ass::print(){
@@ -137,6 +127,23 @@ void Op::print(){
 
 void UnOp::set_expression(ExpAst *e){
 	exp = e;
+	if(e->is_const){
+		is_const = true;
+		if(op_type==UNOP_TYPE::UMINUS_INT) vali = -e->vali;
+		if(op_type==UNOP_TYPE::UMINUS_FLOAT) valf = -e->valf;
+		if(op_type==UNOP_TYPE::TO_INT) vali = e->valf;
+		if(op_type==UNOP_TYPE::TO_FLOAT) valf = e->vali;
+		if(op_type==UNOP_TYPE::NOT){
+			if(type->basetype==BASETYPE::INT){
+				if(e->vali != 0) vali = 0;
+				else vali = 1;
+			}
+			if(type->basetype==BASETYPE::FLOAT){
+				if(e->valf != 0) valf = 1;
+				else valf = 0;
+			}
+		}
+	}
 }
 
 void UnOp::print(){
@@ -145,7 +152,11 @@ void UnOp::print(){
 	cout<<")";
 }
 
-// Print Function for Identifier //
+// Get_id and Print Function for Identifier //
+
+string Identifier::get_id(){
+	return id;
+}
 
 void Identifier::print(){
 	cout<<"(Id \""<<id<<"\")";

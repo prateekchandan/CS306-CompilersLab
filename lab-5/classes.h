@@ -79,12 +79,18 @@ class StmtAst : public abstract_astnode {
 };
 
 class ExpAst : public abstract_astnode {
+	
 	public:
 	TYPE* type;
-	int reg_addr = -1;
-	int mem_addr = INF;
-	bool is_lval = false;
-	bool is_leaf = false;
+	int reg_addr = -1;			// Register containing the node's value (if register is used)
+	int mem_offset = INF;		// ebp offset of location containing node's value (if stack is used)
+	
+	int vali;
+	float valf;
+	
+	bool is_identifier = false;
+	bool is_const = false;
+	bool is_arrayref = false;
 	
 	virtual void print () = 0;
 	virtual void gen_code() = 0;
@@ -100,15 +106,14 @@ class Identifier : public ExpAst {
 	
 	public:
 	Identifier(){
-		is_lval = true;
-		is_leaf = true;
+		is_identifier = true;
 	}
 	Identifier(string s){
-		is_lval = true;
-		is_leaf = true;
+		is_identifier = true;
 		id = s;
 	}
 	
+	string get_id();
 	void print();
 	void gen_code();
 };
@@ -120,17 +125,15 @@ class Identifier : public ExpAst {
 class BlockAst : public StmtAst {
 	protected:
 	vector<StmtAst*> statements;
-	SymbolTable* curr;
+	SymbolTable* symbolTable;
 	
 	public:
 	BlockAst(){}
 	BlockAst(SymbolTable* s){
-		curr = s;
+		symbolTable = s;
 	}
 	void print();
 	void add_statement(StmtAst *e);
-	//int get_stmtlist_length();
-	//StmtAst* get_stmt_i(int i);
 	void gen_code();
 };
 
@@ -141,7 +144,7 @@ class Ass : public StmtAst {
 	ExpAst *right;
 	
 	public:
-	Ass() {}
+	Ass(){}
 	Ass(ExpAst *l, ExpAst *r) {
 		left = l;
 		right = r;
@@ -149,7 +152,7 @@ class Ass : public StmtAst {
 	void print();
 	void gen_code();
 };
-	
+
 class ReturnSt : public StmtAst {
 	
 	protected:
@@ -240,7 +243,7 @@ class FunCallStmt : public StmtAst {
 /////////////////////////////////////////////////////////////////////////////
 // Child classes of ExpAst class ///////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
- 
+
 class Op : public ExpAst {
 	
 	protected:
@@ -254,6 +257,18 @@ class Op : public ExpAst {
 		op_type = o;
 		left = l;
 		right = r;
+		if(l->is_const && r->is_const){
+			is_const = true;
+			if(o==OP_TYPE::PLUS_INT) vali = l->vali + r->vali;
+			if(o==OP_TYPE::PLUS_FLOAT) valf = l->valf + r->valf;
+			if(o==OP_TYPE::MINUS_INT) vali = l->vali - r->vali;
+			if(o==OP_TYPE::MINUS_FLOAT) valf = l->valf - r->valf;
+			if(o==OP_TYPE::MULT_INT) vali = l->vali * r->vali;
+			if(o==OP_TYPE::MULT_FLOAT) valf = l->valf * r->valf;
+			if(o==OP_TYPE::DIV_INT) vali = l->vali / r->vali;
+			if(o==OP_TYPE::DIV_FLOAT) valf = l->valf / r->valf;
+			return;
+		}
 	}
 	void print();
 	void gen_code();	
@@ -273,6 +288,23 @@ class UnOp : public ExpAst {
 	UnOp(int o, ExpAst *e) {
 		op_type = o;
 		exp = e;
+		if(e->is_const){
+			is_const = true;
+			if(o==UNOP_TYPE::UMINUS_INT) vali = -e->vali;
+			if(o==UNOP_TYPE::UMINUS_FLOAT) valf = -e->valf;
+			if(o==UNOP_TYPE::TO_INT) vali = e->valf;
+			if(o==UNOP_TYPE::TO_FLOAT) valf = e->vali;
+			if(op_type==UNOP_TYPE::NOT){
+				if(type->basetype==BASETYPE::INT){
+					if(e->vali != 0) vali = 0;
+					else vali = 1;
+				}
+				if(type->basetype==BASETYPE::FLOAT){
+					if(e->valf != 0.0) valf = 1.0;
+					else valf = 0.0;
+				}
+			}
+		}
 	}
 	int get_type(){
 		return op_type;
@@ -311,11 +343,12 @@ class FloatConst : public ExpAst {
 	
 	public:
 	FloatConst(){
-		is_leaf = true;
+		is_const = true;
 	}
 	FloatConst(float f){
-		is_leaf = true;
+		is_const = true;
 		val = f;
+		valf = f;
 		type = new TYPE(BASETYPE::FLOAT);
 	}
 	void print();
@@ -330,11 +363,12 @@ class IntConst : public ExpAst {
 	
 	public:
 	IntConst(){
-		is_leaf = true;
+		is_const = true;
 	}
 	IntConst(int i){
-		is_leaf = true;
+		is_const = true;
 		val = i;
+		vali = i;
 		type = new TYPE(BASETYPE::INT);
 	}
 	void print();
@@ -349,10 +383,10 @@ class StringConst : public ExpAst {
 	
 	public:
 	StringConst(){
-		is_leaf = true;
+		is_const = true;
 	}
 	StringConst(string s){
-		is_leaf = true;
+		is_const = true;
 		val = s;
 		type = new TYPE(BASETYPE::STRING);
 	}
@@ -365,16 +399,15 @@ class ArrayRef : public ExpAst {
 	
 	protected:
 	Identifier *name;
+	int offset;
 	vector<ExpAst*> indices;
 	
 	public:
 	ArrayRef(){
-		is_lval = true;
-		is_leaf = true;
+		is_arrayref = true;
 	}
 	ArrayRef(Identifier *i){
-		is_lval = true;
-		is_leaf = true;
+		is_arrayref = true;
 		name = i;
 	}
 	ArrayRef(ArrayRef* child){

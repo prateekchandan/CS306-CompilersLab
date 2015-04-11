@@ -24,7 +24,9 @@ translation_unit
 		$$ = $1 ;
 		
 		$1->print();
+		set_global_ST(SymbolTableStack.back());
 		$1->gen_code();
+		print_code();
 		
 		// Print Symbol table when print_symbol_table is enabled
 		if(print_symbol_table){
@@ -44,7 +46,9 @@ translation_unit
 		$$ = $1 ;
 		
 		$2->print();
+		set_global_ST(SymbolTableStack.back());
 		$2->gen_code();
+		print_code();
 		
 		// Print Symbol table when print_symbol_table is enabled
 		if(print_symbol_table){
@@ -181,8 +185,8 @@ compound_statement
 statement_list
 	: statement
 	{
-		StmtAst* temp_val = $$;
-		$$ = new BlockAst();
+		StmtAst* temp_val = $1;
+		$$ = new BlockAst(CurrentSymbolTable);
 		((BlockAst*)$$)->add_statement(temp_val);
 	}		
 	| statement_list statement
@@ -612,6 +616,7 @@ l_expression
 			cout<<"Error at line "<<line_no<<" :"<<$1<<" Undefined\n";
 			exit(0);
 		}
+		$$->mem_offset = CurrentSymbolTable->GetEntry($1)->offset;
 	}
 	| l_expression '[' expression ']'
 	{	
@@ -633,6 +638,7 @@ l_expression
 			// We are at base case
 			$$ = new ArrayRef((Identifier*)$1);
 			((ArrayRef*)$$)->add_index($3);
+			$$->mem_offset = CurrentSymbolTable->GetEntry(((Identifier*)$1)->get_id())->offset;
 		}
 		else{
 			// We are recursive step
