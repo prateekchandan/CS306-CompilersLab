@@ -220,7 +220,7 @@ SymbolTableEntry* SymbolTable::GetEntry(string s){
 }
 
 void SymbolTable::print(){
-	cout<<"\nSymboltable for "<<name<<": \n";
+	cout<<"\nSymboltable for "<<name<<" , Nestlevel =  "<<nested_level<<": \n";
 	for (map<string,SymbolTableEntry*>::iterator it=Entry.begin(); it!=Entry.end(); ++it)
    		it->second->print();
    	cout<<endl;

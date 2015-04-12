@@ -86,6 +86,7 @@ fun_declarator
 		current_scope = SCOPE::PARAM;
 
 		SymbolTable *temp = new SymbolTable($1);
+		temp->nested_level = SymbolTableStack.size();
 		$$->table = temp;
 		
 		temp->returnType = curr_type;
@@ -119,6 +120,7 @@ fun_declarator
 		current_scope = SCOPE::PARAM;
 
 		SymbolTable *temp = new SymbolTable($1);
+		temp->nested_level = SymbolTableStack.size();
 		$$->table = temp;
 		temp->returnType = curr_type;
 		bool check=CurrentSymbolTable->AddEntry($1,$$);
