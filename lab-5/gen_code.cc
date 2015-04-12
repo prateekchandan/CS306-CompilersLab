@@ -195,6 +195,7 @@ string make_instr(string c){
 
 void BlockAst::gen_code(){
 	currentST = symbolTable;					// set the current symbol table
+	cout<<"The sybol table changed."<<endl;
 	for(int i=0; i<statements.size(); i++){
 		statements[i]->gen_code();
 	}
@@ -321,6 +322,7 @@ void Identifier::gen_code(){
 	assert(type->child == NULL);					// Check that it is not an array type	
 	Reg r = rm.get_top();							// Get the top-most free register
 	
+	cout<<"Reached here, identifier: "<<id<<endl;
 	if(type->basetype == BASETYPE::INT){			// If type is int, use loadi
 		add_line_to_code(make_instr("loadi",make_instr("ind",ebp,mem_offset),r), true);
 	}
@@ -632,10 +634,11 @@ void FunCall::gen_code(){
 	
 	Reg r = rm.get_top();				// Top register ( will have to evaluate asnwer in this)
 	string s;
-	string arg_types = "";				// for storing list of types of arguments
-	int ret_type = type->basetype;		// return type of this function expression
+	vector<int> arg_types;									// for storing list of types of arguments
+	int ret_type = type->basetype;							// return type of this function expression
 	assert(ret_type!=BASETYPE::VOID);
 	string dtype = (ret_type==BASETYPE::INT) ? "i" : "f";
+	bool is_printf = (!name->get_id().compare("printf")); 	// Check if function is printf
 	
 	////////////////////////////////////////////////////
 	// Save the registers which are in use (TODO) //////
@@ -646,15 +649,33 @@ void FunCall::gen_code(){
 	add_line_to_code(s,true);
 	
 	// Evaluate arguments from right to left and push onto the stack
-	for(int i=expression_list.size(); i>=0; i--){
+	for(int i=expression_list.size()-1; i>=0; i--){
+		bool is_int = (expression_list[i]->type->basetype == BASETYPE::INT);
+		bool is_string = (expression_list[i]->type->basetype == BASETYPE::STRING);
+		
 		if(expression_list[i]->is_const){
-			s = make_instr("push"+dtype,expression_list[i]->vali);
-			arg_types = arg_types+dtype;
+			if(is_string){
+				assert(is_printf);
+			}
+			if(is_int){
+				s = make_instr("pushi",expression_list[i]->vali);
+				arg_types.push_back(0);
+			}
+			else{
+				s = make_instr("pushf",expression_list[i]->valf);
+				arg_types.push_back(1);
+			}
 		}
-		else{	
+		else{
 			expression_list[i]->gen_code();
-			s = make_instr("push"+dtype,r);
-			arg_types = arg_types+dtype;
+			if(is_int){
+				s = make_instr("pushi",r);
+				arg_types.push_back(0);
+			}
+			else{
+				s = make_instr("pushf",r);
+				arg_types.push_back(1);
+			}
 		}
 		add_line_to_code(s,true);
 	}
