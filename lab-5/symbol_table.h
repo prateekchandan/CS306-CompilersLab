@@ -122,4 +122,5 @@ class SymbolTable
 	void print();
 	void arg_type_add(BASETYPE b);
 	vector<BASETYPE> get_param_types();
+	string get_name();
 };

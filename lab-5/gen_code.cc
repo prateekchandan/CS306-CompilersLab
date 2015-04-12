@@ -105,6 +105,7 @@ int add_line_to_code(string s, bool stmt_start){
 	if(stmt_start){		// Add line number tag
 		s = to_string(line_num)+":\t"+s;
 	}
+	else s = "\t"+s;
 	code.push_back(s);
 	line_num++;
 	return line_num-1;
@@ -198,13 +199,46 @@ string make_instr(string c){
 /////////////////////////////////////////////////////////////////////////////
 
 void BlockAst::gen_code(){
-	SymbolTable *temp = currentST;
-	currentST = symbolTable;					// set the current symbol table
-	cout<<"\nThe symbol table changed."<<endl;
+	SymbolTable *temp;
+	bool changed_scope = (currentST != symbolTable);
+	
+	// If scope changed, means function definition has been encountered
+	if(changed_scope){
+		temp = currentST;
+		currentST = symbolTable;			// set the current symbol table
+		
+		string fun_sig = "void "+currentST->get_name()+"()\n{";
+		code.push_back(fun_sig);
+		line_num++;
+		
+		string s = make_instr("pushi",ebp);
+		add_line_to_code(s,false);
+		s = make_instr("move",esp,ebp);
+		add_line_to_code(s,false);
+		// create space on stack for local variables here ////////////
+		add_line_to_code("",false);
+	}
+	
 	for(int i=0; i<statements.size(); i++){
 		statements[i]->gen_code();
 	}
-	currentST = temp;
+	
+	if(changed_scope){
+		code.push_back("e:");
+		line_num++;
+		// pop off local variables from the stack here /////////////
+		
+		string s = make_instr("move",make_instr("ind",ebp),ebp);
+		add_line_to_code(s,false);
+		s = make_instr("popi",1);
+		add_line_to_code(s,false);
+		s = "\treturn;\n}\n";
+		code.push_back(s);
+		line_num++;
+		
+		currentST = temp;
+	}
+	return;
 }
 
 void Ass::gen_code(){
@@ -286,8 +320,8 @@ void ReturnSt::gen_code(){
 
 	s = make_instr("store"+dtype,r,make_instr("ind",ebp,currentST->return_offset));
 	add_line_to_code(s,true);
-	s = "return;";
-	add_line_to_code(s,true);
+	s = make_instr("j","e");
+	add_line_to_code(s,false);
 	
 	add_line_to_code("",false);
 	return;
