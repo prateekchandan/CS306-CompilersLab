@@ -108,7 +108,7 @@ class SymbolTable
 
 	public:
 	TYPE* returnType;
-	int return_offset;
+	int return_offset,nested_level;
 	
 	// Constructors and desctructor of this class
 	SymbolTable(string n = "Junk"){

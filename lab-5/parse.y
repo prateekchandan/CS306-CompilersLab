@@ -86,6 +86,7 @@ fun_declarator
 		current_scope = SCOPE::PARAM;
 
 		SymbolTable *temp = new SymbolTable($1);
+		temp->nested_level = SymbolTableStack.size();
 		$$->table = temp;
 		
 		temp->returnType = curr_type;
@@ -97,14 +98,14 @@ fun_declarator
 		SymbolTableStack.push_back(CurrentSymbolTable);
 		CurrentSymbolTable = temp;
 		offsetStack.push_back(global_offset);
-		global_offset = 4;
+		global_offset = 8;
 
 	} 
 	parameter_list ')'
 	{
 		current_scope = SCOPE::LOCAL;
 		CurrentSymbolTable->return_offset = global_offset;
-		global_offset = -8;
+		global_offset = -4;
 		offset_multiplier = -1;
 	}
 	|
@@ -119,6 +120,7 @@ fun_declarator
 		current_scope = SCOPE::PARAM;
 
 		SymbolTable *temp = new SymbolTable($1);
+		temp->nested_level = SymbolTableStack.size();
 		$$->table = temp;
 		temp->returnType = curr_type;
 		bool check=CurrentSymbolTable->AddEntry($1,$$);
@@ -129,7 +131,7 @@ fun_declarator
 		CurrentSymbolTable = temp;
 		offsetStack.push_back(global_offset);
 		CurrentSymbolTable->return_offset = global_offset;
-		global_offset = -8;
+		global_offset = -4;
 		offset_multiplier = -1;
 
 		current_scope = SCOPE::LOCAL;
