@@ -2,7 +2,7 @@
 /////////////// GLOBAL VARIABLES FOR SYMBOL TABLE GENERATION //////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-int print_symbol_table = 1;										// Flag indicating whether to print symbol table
+int print_symbol_table = 0;										// Flag indicating whether to print symbol table
 SCOPE current_scope = SCOPE::GLOBAL;							// For knowing the current scope while parsing
 
 SymbolTable* CurrentSymbolTable = new SymbolTable("Global");	// Pointer to current symbol table (Initially global)

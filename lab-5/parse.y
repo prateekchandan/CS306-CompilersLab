@@ -22,16 +22,18 @@ translation_unit
 	function_definition 
 	{
 		$$ = $1 ;
-		
-		$1->print();
 		set_global_ST(SymbolTableStack.back());
+		
+		// Print the AST when print_AST is enabled
+		if(print_AST) $1->print();
+		
 		$1->gen_code();
 		print_code();
 		
 		// Print Symbol table when print_symbol_table is enabled
 		if(print_symbol_table){
 			CurrentSymbolTable->print();
-			cout<<endl<<"\n-----------------------\n";
+			cout<<"-----------------------\n";
 		}
 		
 		// Restoring Environment
@@ -44,16 +46,18 @@ translation_unit
 	| translation_unit function_definition
 	{
 		$$ = $1 ;
-		
-		$2->print();
 		set_global_ST(SymbolTableStack.back());
+		
+		// Print the AST when print_AST is enabled
+		if(print_AST) $2->print();
+
 		$2->gen_code();
 		print_code();
 		
 		// Print Symbol table when print_symbol_table is enabled
 		if(print_symbol_table){
 			CurrentSymbolTable->print();
-			cout<<endl<<"\n-----------------------\n";
+			cout<<"-----------------------\n";
 		}
 		
 		// Restoring Environment
@@ -230,9 +234,10 @@ statement
 			cout<<"Error at line "<<line_no<<" : Incompatible Return Type\n";
 			exit(0);
 		}
+
 		if(rtype->basetype != $2->type->basetype)
 			$2 = new UnOp(getTypeCast(rtype),$2);
-
+			
 		$$ = new ReturnSt($2);
 	}
 	| IDENTIFIER '(' ')' ';'
@@ -633,6 +638,7 @@ l_expression
 			exit(0);
 		}
 		TYPE* temp = $1->type->child;
+		string name = ((Identifier*)$1)->get_id();
 
 		if($3->type->basetype != BASETYPE::INT){
 			cout<<"Error at line "<<line_no<<" :Array Indices Not an Integer\n";
@@ -642,7 +648,7 @@ l_expression
 			// We are at base case
 			$$ = new ArrayRef((Identifier*)$1);
 			((ArrayRef*)$$)->add_index($3);
-			$$->mem_offset = CurrentSymbolTable->GetEntry(((Identifier*)$1)->get_id())->offset;
+			$$->mem_offset = CurrentSymbolTable->GetEntry(name)->offset;
 		}
 		else{
 			// We are recursive step
@@ -728,7 +734,7 @@ declaration
 		$$ = $1 ;
 		CurrentSymbolTable->print();
 		$1->print();
-		cout<<endl<<"\n-----------------------\n";
+		cout<<"-----------------------\n";
 
 		// Restoring Environment
 		CurrentSymbolTable = SymbolTableStack.back();

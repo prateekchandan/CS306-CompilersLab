@@ -285,9 +285,16 @@ class UnOp : public ExpAst {
 	UnOp() {}
 	UnOp(int o) {
 		op_type = o;
+		if(o==UMINUS_INT||o==PP_INT||o==TO_INT||o==NOT) type = new TYPE(INT);
+		else type = new TYPE(FLOAT);
 	}
 	UnOp(int o, ExpAst *e) {
 		op_type = o;
+		if(o==NOT) type = new TYPE(e->type->basetype);
+		else if(o==UMINUS_INT||o==PP_INT||o==TO_INT) type = new TYPE(INT);
+		else type = new TYPE(FLOAT);
+		
+		type = new TYPE(e->type->basetype);
 		exp = e;
 		if(e->is_const){
 			is_const = true;
@@ -312,6 +319,12 @@ class UnOp : public ExpAst {
 	}
 	void set_type(int o){
 		op_type = o;
+		if(o==NOT){
+			if(exp!=NULL && exp->type != NULL) type = new TYPE(exp->type->basetype);
+			else type = new TYPE(INT);
+		}
+		else if(o==UMINUS_INT||o==PP_INT||o==TO_INT) type = new TYPE(INT);
+		else type = new TYPE(FLOAT);
 	}
 	void set_expression(ExpAst *e);
 	void print();
@@ -401,7 +414,6 @@ class ArrayRef : public ExpAst {
 	
 	protected:
 	Identifier *name;
-	int offset;
 	vector<ExpAst*> indices;
 	
 	public:
@@ -409,10 +421,12 @@ class ArrayRef : public ExpAst {
 		is_arrayref = true;
 	}
 	ArrayRef(Identifier *i){
+		mem_offset = i->mem_offset;
 		is_arrayref = true;
 		name = i;
 	}
 	ArrayRef(ArrayRef* child){
+		mem_offset = child->mem_offset;
 		indices = child->indices;
 		name = child->name;
 	}

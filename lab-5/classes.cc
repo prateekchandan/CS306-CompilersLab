@@ -10,6 +10,8 @@ string operator_map[] = {"OR" , "AND" ,"EQ_OP_INT" , "EQ_OP_FLOAT" , "NE_OP_INT"
 "ASSIGN_FLOAT" , "UMINUS_INT" , "UMINUS_FLOAT" , "NOT" , "INC_OP_INT" , "INC_OP_FLOAT",
 "TO_INT" , "TO_FLOAT"} ;
 
+int print_AST = 0;										// Flag indicating whether to print the AST
+
 // Functions for BlockAst //
 
 void BlockAst::add_statement(StmtAst *e){
@@ -127,6 +129,14 @@ void Op::print(){
 
 void UnOp::set_expression(ExpAst *e){
 	exp = e;
+	int o = op_type;
+	if(o==NOT){
+		if(exp!=NULL && exp->type != NULL) type = new TYPE(exp->type->basetype);
+		else type = new TYPE(INT);
+	}
+	else if(o==UMINUS_INT||o==PP_INT||o==TO_INT) type = new TYPE(INT);
+	else type = new TYPE(FLOAT);
+		
 	if(e->is_const){
 		is_const = true;
 		if(op_type==UNOP_TYPE::UMINUS_INT) vali = -e->vali;

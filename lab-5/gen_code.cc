@@ -198,34 +198,116 @@ string make_instr(string c){
 /////////////////////////////////////////////////////////////////////////////
 
 void BlockAst::gen_code(){
+	SymbolTable *temp = currentST;
 	currentST = symbolTable;					// set the current symbol table
-	cout<<"The sybol table changed."<<endl;
+	cout<<"\nThe symbol table changed."<<endl;
 	for(int i=0; i<statements.size(); i++){
 		statements[i]->gen_code();
 	}
+	currentST = temp;
 }
 
 void Ass::gen_code(){
 	if(left==NULL && right==NULL) return;					// Empty Statement
 	assert(left->is_identifier || left->is_arrayref);		// Just check that LHS is an lval
 	
-	left->gen_code();
-	right->gen_code();
+	string dtype = (left->type->basetype==BASETYPE::INT)?"i":"f";
+	string s;
+	Reg r = rm.get_top();
+	
+	if(left->is_identifier){
+		if(right->is_const){
+			// If right side is constant, use immediate operation (also put that value in top register for return of this node)
+			if(!dtype.compare("i")){
+				s = make_instr("storei", right->vali, make_instr("ind",ebp,left->mem_offset));
+				add_line_to_code(s,true);
+				s = make_instr("move", right->vali, r);
+			}
+			else{
+				s = make_instr("storef", right->valf, make_instr("ind",ebp,left->mem_offset));
+				add_line_to_code(s,true);
+				s = make_instr("move", right->valf, r);
+			}
+			add_line_to_code(s,true);
+		}
+		else{
+			// Else first generate code for the right side
+			right->gen_code();
+			s = make_instr("store"+dtype, r, make_instr("ind",ebp,left->mem_offset));
+			add_line_to_code(s,true);
+		}
+	}
+	else if(left->is_arrayref){
+		((ArrayRef*)left)->gen_code_addr();
+		if(right->is_const){
+			// If right side is constant, use immediate operation (also put that value in top register for return of this node)
+			if(!dtype.compare("i")){
+				s = make_instr("storei",right->vali, make_instr("ind",r));
+				add_line_to_code(s,true);
+				s = make_instr("move", right->vali, r);
+			}
+			else{
+				s = make_instr("storef",right->valf, make_instr("ind",r));
+				add_line_to_code(s,true);
+				s = make_instr("move", right->valf, r);
+			}
+			add_line_to_code(s,true);
+		}
+		else{
+			// Else save the lval index onto the stack & evaluate right side
+			s = make_instr("push"+dtype,r); 	// save the index
+			add_line_to_code(s,true);
+			right->gen_code();					// generate code for rhs
+			rm.pop_top();						// pop the top register r
+			Reg l = rm.get_top();				// get the current top register
+			rm.push_top(r);						// put back the register r on top
+			s = make_instr("load"+dtype, make_instr("ind",esp), l); // load the saved index in current top register l
+			add_line_to_code(s,true);
+			s = make_instr("pop"+dtype, 1);		// pop the saved value from stack
+			add_line_to_code(s,true);
+			s = make_instr("store"+dtype, r, make_instr("ind",l)); // store the calculated rhs value in lhs's index
+			add_line_to_code(s,true);
+		}
+	}
+	else assert(0);
+	
+	add_line_to_code("",false);
+	return;
 }
 	
 void ReturnSt::gen_code(){
+	assert(currentST->returnType->basetype!=BASETYPE::VOID);
+
+	string s;
+	Reg r = rm.get_top();			// Top register (will have the answer of evaluated exp)
+	string dtype = (exp->type->basetype==BASETYPE::INT)?"i":"f";
+	
 	exp->gen_code();
+
+	s = make_instr("store"+dtype,r,make_instr("ind",ebp,currentST->return_offset));
+	add_line_to_code(s,true);
+	s = "return;";
+	add_line_to_code(s,true);
+	
+	add_line_to_code("",false);
+	return;
 }
 
 void If::gen_code(){
 	cond->gen_code();
 	statement1->gen_code();
 	statement2->gen_code();
+	
+	add_line_to_code("",false);
+	return;
 }
 
 void While::gen_code(){
 	cond->gen_code();
 	statement->gen_code();
+	
+	add_line_to_code("",false);
+	return;
 }
 
 void For::gen_code(){
@@ -233,6 +315,9 @@ void For::gen_code(){
 	cond->gen_code();
 	statement->gen_code();
 	step->gen_code();
+	
+	add_line_to_code("",false);
+	return;
 }
 
 void FunCallStmt::gen_code(){
@@ -256,30 +341,41 @@ void FunCallStmt::gen_code(){
 		if(expression_list[i]->is_const){
 			if(is_string){
 				assert(is_printf);
+				s = make_instr("print_string",((StringConst*)expression_list[i])->getVal());
 			}
 			if(is_int){
-				s = make_instr("pushi",expression_list[i]->vali);
+				if(is_printf) s = make_instr("print_int",expression_list[i]->vali);
+				else s = make_instr("pushi",expression_list[i]->vali);
 				arg_types.push_back(0);
 			}
 			else{
-				s = make_instr("pushf",expression_list[i]->valf);
+				if(is_printf) s = make_instr("print_float",expression_list[i]->valf);
+				else s = make_instr("pushf",expression_list[i]->valf);
 				arg_types.push_back(1);
 			}
 		}
 		else{
 			expression_list[i]->gen_code();
 			if(is_int){
-				s = make_instr("pushi",r);
+				if(is_printf) s = make_instr("print_int",r);
+				else s = make_instr("pushi",r);
 				arg_types.push_back(0);
 			}
 			else{
-				s = make_instr("pushf",r);
+				if(is_printf) s = make_instr("print_float",r);
+				else s = make_instr("pushf",r);
 				arg_types.push_back(1);
 			}
 		}
 		add_line_to_code(s,true);
 	}
 
+	// Return if the function is printf, as it's job is over
+	if(is_printf){
+		add_line_to_code("",false);
+		return;
+	}
+	
 	// Push the static link (TODO)
 	s = make_instr("pushi",0);
 	add_line_to_code(s,true);
@@ -287,6 +383,7 @@ void FunCallStmt::gen_code(){
 	// Make a call to the function
 	s = make_instr(name->get_id());
 	add_line_to_code(s,true);
+
 	
 	// Pop static link & parameters from the stack (initial count=1 is for popping the static link)
 	int mode = 0;								// 0 means int, 1 means float;
@@ -314,6 +411,7 @@ void FunCallStmt::gen_code(){
 	// Load the registers which were saved (TODO) //////
 	////////////////////////////////////////////////////
 	
+	add_line_to_code("",false);
 	return;
 }
 
@@ -326,7 +424,6 @@ void Identifier::gen_code(){
 	assert(type->child == NULL);					// Check that it is not an array type	
 	Reg r = rm.get_top();							// Get the top-most free register
 	
-	cout<<"Reached here, identifier: "<<id<<endl;
 	if(type->basetype == BASETYPE::INT){			// If type is int, use loadi
 		add_line_to_code(make_instr("loadi",make_instr("ind",ebp,mem_offset),r), true);
 	}
@@ -375,7 +472,7 @@ void Op::gen_code(){
 			reg_addr = r;
 		}
 		else if(left->is_arrayref){
-			left->gen_code();
+			((ArrayRef*)left)->gen_code_addr();
 			Reg r = rm.get_top();
 			if(right->is_const){
 				// If right side is constant, use immediate operation (also put that value in top register for return of this node)
@@ -492,7 +589,7 @@ void Op::gen_code(){
 			reg_addr = r;
 			return;
 		}
-		
+
 		// Both sides have non-constant values //
 		if(rm.free_reg_count()>2 || left->is_identifier){		// If Current node has more than 2 registers ||
 			right->gen_code();									// Current node has 2 registers, but left is identifier
@@ -748,14 +845,106 @@ void FunCall::gen_code(){
 
 void FloatConst::gen_code(){ assert(0);}
 void IntConst::gen_code(){ assert(0);}
-void StringConst::gen_code(){ /*assert(0);*/}
+void StringConst::gen_code(){ assert(0);}
 
 // This function should return value of the array ref in the top register r
 void ArrayRef::gen_code(){
 	
+	gen_code_addr();					// First call gen_code_addr to get pointer to the required location
+	Reg r = rm.get_top();				// Top register (currently contains pointer to the required value)
+	string dtype = (type->basetype==BASETYPE::INT)?"i":"f";
+	
+	string s = make_instr("load"+dtype,make_instr("ind",r),r); // r <- *(r)
+	add_line_to_code(s,true);
+	reg_addr = r;
+	return;
 }
 
 // This function should return address of the array ref in the top register r
 void ArrayRef::gen_code_addr(){
 	
+	Reg r = rm.get_top();				// Top register (will have to evaluate address of array ref in this)
+	string s;
+	vector<int> dimension;				// for storing dimensions of array
+	
+	TYPE *t = currentST->GetEntry(name->get_id())->type->child; 	// start from the 2nd dimension (from left)
+	assert(t!=NULL);												// assert that this is not a base type
+	for(; t != NULL; t = t->child) dimension.push_back(t->size); 	// keep collecting the dimensions towards right
+	int indc = indices.size()-1;
+	
+	// Now find out products of sizes starting from right end (for use later)
+	for(int i=dimension.size()-2; i>=0;i--) dimension[i] *= dimension[i+1];
+	
+	// Case where you have > 2 free registers
+	if(rm.free_reg_count()>2){
+		
+		// Evaluate the rightmost index using all registers
+		if(indices[indc]->is_const)		// If constant, use move
+			s = make_instr("move",dimension[indc]*indices[indc]->vali,r);
+		else{							// Else, evaluate & multiply with sizeof(basetype) viz. dimension[indc]
+			indices[indc]->gen_code();
+			s = make_instr("muli",dimension[indc],r);
+		}
+		add_line_to_code(s,true);
+		
+		rm.pop_top();			// Pop top register and keep it for accumulating sum
+		Reg l = rm.get_top();	// l = new top register
+		
+		// Now start evaluating from second last index
+		for(int i=indc-1; i>=0; i--){
+			if(indices[i]->is_const){
+				s = make_instr("addi",(indices[i]->vali)*dimension[i],r);	// r <- r + dim[i]*ind[i]
+			}
+			else{
+				indices[i]->gen_code();
+				s = make_instr("muli",dimension[i],l);						// l <- l*dim[i]
+				add_line_to_code(s,true);
+				s = make_instr("addi",l,r);									// r <- l + r
+			}	
+			add_line_to_code(s,true);
+		}
+	}
+	
+	// Case where you have = 2 free registers
+	else{
+		s = make_instr("pushi",0);		// Accumulate the sum on a stack location & initialize it to 0
+		add_line_to_code(s,true);
+		
+		// Now start evaluating from last index
+		for(int i=indc; i>=0; i--){
+			if(indices[i]->is_const){
+				s = make_instr("loadi",make_instr("ind",esp),r);			// r <- *(esp)
+				add_line_to_code(s,true);
+				s = make_instr("addi",(indices[i]->vali)*dimension[i],r);	// r <- r + dim[i]*ind[i]
+				add_line_to_code(s,true);
+				s = make_instr("stori",r,make_instr("ind",esp));			// *(esp) <- r
+			}
+			else{
+				indices[i]->gen_code();										// r <- ind[i]
+				s = make_instr("muli",dimension[i],r);						// r <- dimension[i]*r
+				add_line_to_code(s,true);
+				
+				rm.pop_top();												// pop(r)
+				Reg l = rm.get_top();										// l = get new top register
+				rm.push_top(r);												// push(r)
+				
+				s = make_instr("loadi",make_instr("ind",esp),l);			// l <- *(esp)
+				add_line_to_code(s,true);
+				s = make_instr("addi",r,l);									// l <- r + l
+				add_line_to_code(s,true);
+				s = make_instr("stori",l,make_instr("ind",esp));			// *(esp) <- l
+			}	
+			add_line_to_code(s,true);
+		}
+	}
+	
+	s = make_instr("muli",-1,r);			// Negate r, as the index grows towards lower addresses of stack
+	add_line_to_code(s,true);
+	s = make_instr("addi",mem_offset,r);	// Add mem_offset of array-base wrt ebp
+	add_line_to_code(s,true);
+	s = make_instr("addi",ebp,r);			// Get absolute address by r <- ebp + r
+	add_line_to_code(s,true);
+	
+	reg_addr = r;
+	return;
 }
