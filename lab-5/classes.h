@@ -228,6 +228,7 @@ class FunCallStmt : public StmtAst {
 	
 	public:
 	vector<ExpAst*> expression_list;
+	
 	FunCallStmt() {}
 	FunCallStmt(Identifier *i){
 		name = i;
@@ -324,6 +325,7 @@ class FunCall : public ExpAst {
 	
 	public:
 	vector<ExpAst*> expression_list;
+	
 	FunCall() {}
 	FunCall(Identifier *i){
 		name = i;
@@ -418,3 +420,6 @@ class ArrayRef : public ExpAst {
 	void print();
 	void gen_code();
 };
+
+// Helper function declared here
+void gen_code_helper(FunCall *func, FunCallStmt *func1, int t);

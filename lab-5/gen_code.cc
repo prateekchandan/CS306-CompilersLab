@@ -231,9 +231,85 @@ void For::gen_code(){
 }
 
 void FunCallStmt::gen_code(){
-	for(int i = 0; i<expression_list.size(); i++){
-		expression_list[i]->gen_code();
+	
+	string s;
+	Reg r = rm.get_top();					// Top register (will have to evaluate answer in this, if FunCall)
+	vector<int> arg_types;					// for storing list of types of arguments (0=int, 1=float)
+	bool is_printf = (!name->get_id().compare("printf")); 	// Check if function is printf
+	
+	////////////////////////////////////////////////////
+	// Save the registers which are in use (TODO) //////
+	////////////////////////////////////////////////////
+	
+	// Note: No need to push space for return value if FunCallStmt //
+	
+	// Evaluate arguments from right to left and push onto the stack
+	for(int i=expression_list.size()-1; i>=0; i--){
+		bool is_int = (expression_list[i]->type->basetype == BASETYPE::INT);
+		bool is_string = (expression_list[i]->type->basetype == BASETYPE::STRING);
+		
+		if(expression_list[i]->is_const){
+			if(is_string){
+				assert(is_printf);
+			}
+			if(is_int){
+				s = make_instr("pushi",expression_list[i]->vali);
+				arg_types.push_back(0);
+			}
+			else{
+				s = make_instr("pushf",expression_list[i]->valf);
+				arg_types.push_back(1);
+			}
+		}
+		else{
+			expression_list[i]->gen_code();
+			if(is_int){
+				s = make_instr("pushi",r);
+				arg_types.push_back(0);
+			}
+			else{
+				s = make_instr("pushf",r);
+				arg_types.push_back(1);
+			}
+		}
+		add_line_to_code(s,true);
 	}
+
+	// Push the static link (TODO)
+	s = make_instr("pushi",0);
+	add_line_to_code(s,true);
+	
+	// Make a call to the function
+	s = make_instr(name->get_id());
+	add_line_to_code(s,true);
+	
+	// Pop static link & parameters from the stack (initial count=1 is for popping the static link)
+	int mode = 0;								// 0 means int, 1 means float;
+	string dtype = (mode?"f":"i");
+	int count = 1;								// Count of consecutive parameters on the stack of same mode
+	for(int i=arg_types.size()-1; i>=0; i--){
+		
+		if(arg_types[i]==mode) count++;
+		else{
+			if(count!=0){
+				s = make_instr("pop"+dtype,count);
+				add_line_to_code(s,true);
+			}
+			mode = arg_types[i];
+			dtype = (mode?"f":"i");
+			count = 1;
+		}
+	}
+	if(count!=0){
+		s = make_instr("pop"+dtype,count);
+		add_line_to_code(s,true);
+	}
+
+	////////////////////////////////////////////////////
+	// Load the registers which were saved (TODO) //////
+	////////////////////////////////////////////////////
+	
+	return;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -556,7 +632,7 @@ void FunCall::gen_code(){
 	
 	Reg r = rm.get_top();				// Top register ( will have to evaluate asnwer in this)
 	string s;
-	string arg_types = "";				// for storing list of types of assignments
+	string arg_types = "";				// for storing list of types of arguments
 	int ret_type = type->basetype;		// return type of this function expression
 	assert(ret_type!=BASETYPE::VOID);
 	string dtype = (ret_type==BASETYPE::INT) ? "i" : "f";
@@ -592,21 +668,24 @@ void FunCall::gen_code(){
 	add_line_to_code(s,true);
 	
 	// Pop static link & parameters from the stack (initial count=1 is for popping the static link)
-	char mode = 'i';							// 'i' means int, 'f' means float;
+	int mode = 0;								// 0 means int, 1 means float;
+	string dtype1 = (mode?"f":"i");
 	int count = 1;								// Count of consecutive parameters on the stack of same mode
-	for(int i=arg_types.length()-1; i>=0; i--){
-		if(s[i]==mode) count++;
+	for(int i=arg_types.size()-1; i>=0; i--){
+		
+		if(arg_types[i]==mode) count++;
 		else{
 			if(count!=0){
-				s = make_instr("pop"+mode,count);
+				s = make_instr("pop"+dtype1,count);
 				add_line_to_code(s,true);
 			}
-			mode = s[i];
+			mode = arg_types[i];
+			dtype1 = (mode?"f":"i");
 			count = 1;
 		}
 	}
 	if(count!=0){
-		s = make_instr("pop"+mode,count);
+		s = make_instr("pop"+dtype1,count);
 		add_line_to_code(s,true);
 	}
 	
@@ -619,7 +698,7 @@ void FunCall::gen_code(){
 	}
 
 	////////////////////////////////////////////////////
-	// Load the registers which were in use (TODO) /////
+	// Load the registers which were saved (TODO) //////
 	////////////////////////////////////////////////////
 	
 	reg_addr = r;

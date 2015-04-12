@@ -1,0 +1,21 @@
+-> check that void function does not have a return statement
+-> correct the arrangement of params and locals (-4 ka pain)
+-> calculate the level of nestedness of a function in its symbol table in attribute 'level' (while parsing)
+-> what is the return type of printf ?
+-> if int is passed as argument, while float was expected (or vice-versa), do type casting
+
+--------------------------------------------------------------
+int gcd(int a, int b, int c, float f1, float f2, int d){
+	return a/b;
+}
+	
+int main(int r1, int r2, int r3){
+	int a;
+	int b, chr[4];
+	float c;
+	a = !(a+c);
+	a = a*(4*3.0+5-4.6);
+	a = b+a*(c+b);
+	gcd(a,a,a,c,c,a);        <- some error here -_-
+	a=gcd(a,b,b,c,c,a);
+}
