@@ -175,7 +175,11 @@ string make_instr(string c, float f){
 }
 
 string make_instr(string c, string t){
-	string s = c+"(\""+t+"\");";
+	string s;
+	if(!c.compare("j") || !c.compare("je") || !c.compare("jl") || !c.compare("jg") ||
+	!c.compare("jne") || !c.compare("jle") || !c.compare("jge"))
+		s = c+"(\""+t+"\");";
+	else s = c+"("+t+");";
 	return s;
 }
 
@@ -635,18 +639,22 @@ void FunCall::gen_code(){
 	Reg r = rm.get_top();				// Top register ( will have to evaluate asnwer in this)
 	string s;
 	vector<int> arg_types;									// for storing list of types of arguments
+	
 	int ret_type = type->basetype;							// return type of this function expression
 	assert(ret_type!=BASETYPE::VOID);
 	string dtype = (ret_type==BASETYPE::INT) ? "i" : "f";
+	
 	bool is_printf = (!name->get_id().compare("printf")); 	// Check if function is printf
 	
 	////////////////////////////////////////////////////
 	// Save the registers which are in use (TODO) //////
 	////////////////////////////////////////////////////
 	
-	// Push space for return value
-	s = make_instr("push"+dtype,1);
-	add_line_to_code(s,true);
+	// Push space for return value (if not printf function)
+	if(!printf){
+		s = make_instr("push"+dtype,1);
+		add_line_to_code(s,true);
+	}
 	
 	// Evaluate arguments from right to left and push onto the stack
 	for(int i=expression_list.size()-1; i>=0; i--){
@@ -656,28 +664,40 @@ void FunCall::gen_code(){
 		if(expression_list[i]->is_const){
 			if(is_string){
 				assert(is_printf);
+				s = make_instr("print_string",((StringConst*)expression_list[i])->getVal());
 			}
-			if(is_int){
-				s = make_instr("pushi",expression_list[i]->vali);
+			else if(is_int){
+				if(is_printf) s = make_instr("print_int",expression_list[i]->vali);
+				else s = make_instr("pushi",expression_list[i]->vali);
 				arg_types.push_back(0);
 			}
 			else{
-				s = make_instr("pushf",expression_list[i]->valf);
+				if(is_printf) s = make_instr("print_float",expression_list[i]->valf);
+				else s = make_instr("pushf",expression_list[i]->valf);
 				arg_types.push_back(1);
 			}
 		}
 		else{
 			expression_list[i]->gen_code();
 			if(is_int){
-				s = make_instr("pushi",r);
+				if(is_printf) s = make_instr("print_int",r);
+				else s = make_instr("pushi",r);
 				arg_types.push_back(0);
 			}
 			else{
-				s = make_instr("pushf",r);
+				if(is_printf) s = make_instr("print_float",r);
+				else s = make_instr("pushf",r);
 				arg_types.push_back(1);
 			}
 		}
 		add_line_to_code(s,true);
+	}
+	
+	// Return if the function is printf, as it's job is over
+	if(is_printf){
+		s = make_instr("move",0,r);
+		add_line_to_code(s,true);
+		return;
 	}
 	
 	// Push the static link (TODO)
@@ -730,6 +750,12 @@ void FloatConst::gen_code(){ assert(0);}
 void IntConst::gen_code(){ assert(0);}
 void StringConst::gen_code(){ /*assert(0);*/}
 
+// This function should return value of the array ref in the top register r
 void ArrayRef::gen_code(){
+	
+}
+
+// This function should return address of the array ref in the top register r
+void ArrayRef::gen_code_addr(){
 	
 }

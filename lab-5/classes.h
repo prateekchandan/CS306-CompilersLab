@@ -419,6 +419,7 @@ class ArrayRef : public ExpAst {
 	void add_index(ExpAst *e);
 	void print();
 	void gen_code();
+	void gen_code_addr();
 };
 
 // Helper function declared here
