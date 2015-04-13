@@ -4,6 +4,7 @@
 #include <map>
 #include <stack>
 #include <cstdlib>
+#include <utility>
 using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -123,4 +124,5 @@ class SymbolTable
 	void arg_type_add(BASETYPE b);
 	vector<BASETYPE> get_param_types();
 	string get_name();
+	void get_local_offsets(map<int,pair<bool,int> > &locals);
 };

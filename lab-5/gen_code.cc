@@ -74,39 +74,39 @@ class reg_maintainer {
 };
 
 reg_maintainer rm; 								// The register maintainer
-vector<string> code;							// Vector of lines for the generated code
-int line_to_be_printed = 0;						// Shows the line number to be printed next (in the code vector)
+vector<vector<string> *> code_stack;			// Stack of vectors for code (required because of nested function defns)
+vector<string> *code;							// Pointer to vector of lines of the code of current function
 int line_num = 0;								// Line number where the next instruction of the code would come
-SymbolTable *currentST;							// The current symbol table under consideration (used for variable lookup)
+SymbolTable *currentST = NULL;					// The current symbol table under consideration (used for variable lookup)
 
 // For printing the code for functions as they are parsed //
 void print_code(){
-	cout<<endl;
 	int i;
-	for(i=line_to_be_printed; i<code.size(); i++){
-		cout<<code[i]<<endl;
+	for(i=0; i<code->size(); i++){
+		cout<<(*code)[i]<<endl;
 	}
-	assert(line_to_be_printed<=code.size());
-	line_to_be_printed = code.size();
-}
-
-// For setting current symbol table
-void set_global_ST(SymbolTable *g){
-	currentST = g;
+	code->clear();
 }
 
 ////////////////////////////
 ///// Helper Functions /////
 ////////////////////////////
 
+// Function to get a string of space characters
+string get_space(int c){
+	string s = "";
+	for(int i=0; i<c; i++) s = s + " ";
+	return s;
+}
+	
 // Function to add a line of code to the global code vector
-
 int add_line_to_code(string s, bool stmt_start){
+
 	if(stmt_start){		// Add line number tag
-		s = to_string(line_num)+":\t"+s;
+		s = "l"+to_string(line_num)+":"+get_space(8-to_string(line_num).length())+s;
 	}
-	else s = "\t"+s;
-	code.push_back(s);
+	else s = get_space(10)+s;
+	code->push_back(s);
 	line_num++;
 	return line_num-1;
 }
@@ -176,11 +176,7 @@ string make_instr(string c, float f){
 }
 
 string make_instr(string c, string t){
-	string s;
-	if(!c.compare("j") || !c.compare("je") || !c.compare("jl") || !c.compare("jg") ||
-	!c.compare("jne") || !c.compare("jle") || !c.compare("jge"))
-		s = c+"(\""+t+"\");";
-	else s = c+"("+t+");";
+	string s = c+"("+t+");";
 	return s;
 }
 
@@ -199,44 +195,129 @@ string make_instr(string c){
 /////////////////////////////////////////////////////////////////////////////
 
 void BlockAst::gen_code(){
+
 	SymbolTable *temp;
-	bool changed_scope = (currentST != symbolTable);
+	bool changed_scope = (currentST != symbolTable);	// Mark true if entered a new function body
+	map<int,pair<bool,int> > locals;			// map used for setting up locals on stack (if block ast is func defn.)
+	bool last_float_pushed;						// The basetype of the last local pushed onto stack is float ?
+	vector<int> counts_pushed;					// counts of consecutive ints/floats pushed onto stack as locals
+	string func_name;							// name of the function, if this is a function defn.
 	
 	// If scope changed, means function definition has been encountered
 	if(changed_scope){
-		temp = currentST;
-		currentST = symbolTable;			// set the current symbol table
+		temp = currentST;				// save previous ST pointer
+
+		// create new vector for this function's code & make it the current code pointer
+		if(temp!=NULL) code_stack.push_back(code);
+		code = new vector<string>();
+		line_num = 0;
 		
-		string fun_sig = "void "+currentST->get_name()+"()\n{";
-		code.push_back(fun_sig);
+		currentST = symbolTable;			// Set the symbol table pointer to the current one
+		func_name = currentST->get_name(); 	// Obtain the name of the function
+		
+		string fun_sig = "void "+func_name+"()\n{";
+		code->push_back(fun_sig);
 		line_num++;
+
+		// Set up dynamic link of this called function (if it is not main)
+		if(!func_name.compare("main")){
+			assert(temp==NULL);			// assert that main function is not nested within another function
+		}
+		else{
+			string s = make_instr("pushi",ebp);
+			add_line_to_code(s,false);
+			s = make_instr("move",esp,ebp);
+			add_line_to_code(s,false);
+		}
 		
-		string s = make_instr("pushi",ebp);
-		add_line_to_code(s,false);
-		s = make_instr("move",esp,ebp);
-		add_line_to_code(s,false);
-		// create space on stack for local variables here ////////////
+		// Create space on stack for local variables here
+		currentST->get_local_offsets(locals);
+		map<int,pair<bool,int> >::iterator it = locals.end();
+		it--;
+		
+		bool is_float = true;
+		int count = 0;
+		string s,dtype;
+		
+		while(1){
+			if((it->second).first == is_float){
+				count += (it->second).second;
+			}
+			else{
+				if(count!=0){
+					// Push count of consecutive ints (or floats) placed on stack
+					counts_pushed.push_back(count);
+				}
+				is_float = (it->second).first;
+				dtype = (is_float?"f":"i");
+				count = (it->second).second;
+			}
+			
+			for(int i=0; i<(it->second).second; i++){
+				s = make_instr("push"+dtype,0);
+				add_line_to_code(s,false);
+			}
+			
+			if(it==locals.begin()){
+				if(count!=0){
+					// Push count of consecutive ints (or floats) placed on stack
+					counts_pushed.push_back(count);
+				}
+				last_float_pushed = is_float;
+				break;
+			}
+			it--;
+		}
 		add_line_to_code("",false);
 	}
 	
+	// Now call gen_code on each of the block's statement
 	for(int i=0; i<statements.size(); i++){
 		statements[i]->gen_code();
 	}
 	
 	if(changed_scope){
-		code.push_back("e:");
-		line_num++;
-		// pop off local variables from the stack here /////////////
+		string s;
 		
-		string s = make_instr("move",make_instr("ind",ebp),ebp);
-		add_line_to_code(s,false);
-		s = make_instr("popi",1);
-		add_line_to_code(s,false);
-		s = "\treturn;\n}\n";
-		code.push_back(s);
+		// pop off local variables from the stack
+		bool is_float = last_float_pushed;
+		int c_start = counts_pushed.size()-1;
+		for(int i=c_start; i>=0; i--){
+			string dtype = is_float?"f":"i";
+			is_float = !is_float;
+			
+			if(i==c_start){
+				s = "e:"+get_space(8)+"pop"+dtype+"("+to_string(counts_pushed[i])+");";
+				code->push_back(s);
+				line_num++;
+			}
+			else{
+				s = make_instr("pop"+dtype,counts_pushed[i]);
+				add_line_to_code(s,false);
+			}
+		}
+		
+		// Reset back ebp (if not main() function) and return 
+		if(func_name.compare("main")){
+			s = make_instr("loadi",make_instr("ind",ebp),ebp);
+			add_line_to_code(s,false);
+			s = make_instr("popi",1);
+			add_line_to_code(s,false);
+		}
+		s = get_space(10)+"return;\n}\n";
+		code->push_back(s);
 		line_num++;
 		
-		currentST = temp;
+		print_code();										// print this function's code
+		if(temp!=NULL){
+			code = code_stack[code_stack.size()-1];			// If there's an outer function, bring its code back
+			code_stack.pop_back();							// and pop the top most element of code stack
+			line_num = code->size();
+		}
+		else{
+			code = NULL;									// Else make code pointer NULL
+		}
+		currentST = temp;		// set back the previous symbol table
 	}
 	return;
 }
@@ -252,16 +333,10 @@ void Ass::gen_code(){
 	if(left->is_identifier){
 		if(right->is_const){
 			// If right side is constant, use immediate operation (also put that value in top register for return of this node)
-			if(!dtype.compare("i")){
+			if(!dtype.compare("i"))
 				s = make_instr("storei", right->vali, make_instr("ind",ebp,left->mem_offset));
-				add_line_to_code(s,true);
-				s = make_instr("move", right->vali, r);
-			}
-			else{
+			else
 				s = make_instr("storef", right->valf, make_instr("ind",ebp,left->mem_offset));
-				add_line_to_code(s,true);
-				s = make_instr("move", right->valf, r);
-			}
 			add_line_to_code(s,true);
 		}
 		else{
@@ -275,16 +350,10 @@ void Ass::gen_code(){
 		((ArrayRef*)left)->gen_code_addr();
 		if(right->is_const){
 			// If right side is constant, use immediate operation (also put that value in top register for return of this node)
-			if(!dtype.compare("i")){
+			if(!dtype.compare("i"))
 				s = make_instr("storei",right->vali, make_instr("ind",r));
-				add_line_to_code(s,true);
-				s = make_instr("move", right->vali, r);
-			}
-			else{
+			else
 				s = make_instr("storef",right->valf, make_instr("ind",r));
-				add_line_to_code(s,true);
-				s = make_instr("move", right->valf, r);
-			}
 			add_line_to_code(s,true);
 		}
 		else{
@@ -315,14 +384,21 @@ void ReturnSt::gen_code(){
 	string s;
 	Reg r = rm.get_top();			// Top register (will have the answer of evaluated exp)
 	string dtype = (exp->type->basetype==BASETYPE::INT)?"i":"f";
-	
-	exp->gen_code();
 
-	s = make_instr("store"+dtype,r,make_instr("ind",ebp,currentST->return_offset));
+	if(exp->is_const){
+		if(!dtype.compare("i"))
+			s = make_instr("storei",exp->vali,make_instr("ind",ebp,currentST->return_offset));
+		else
+			s = make_instr("storef",exp->valf,make_instr("ind",ebp,currentST->return_offset));
+	}
+	else{
+		exp->gen_code();
+		s = make_instr("store"+dtype,r,make_instr("ind",ebp,currentST->return_offset));
+	}
 	add_line_to_code(s,true);
+	
 	s = make_instr("j","e");
 	add_line_to_code(s,false);
-	
 	add_line_to_code("",false);
 	return;
 }
@@ -359,6 +435,8 @@ void FunCallStmt::gen_code(){
 	string s;
 	Reg r = rm.get_top();					// Top register (will have to evaluate answer in this, if FunCall)
 	vector<int> arg_types;					// for storing list of types of arguments (0=int, 1=float)
+	
+	assert(name->get_id().compare("main"));					// check that main is not called by any function
 	bool is_printf = (!name->get_id().compare("printf")); 	// Check if function is printf
 	
 	////////////////////////////////////////////////////
@@ -368,7 +446,11 @@ void FunCallStmt::gen_code(){
 	// Note: No need to push space for return value if FunCallStmt //
 	
 	// Evaluate arguments from right to left and push onto the stack
-	for(int i=expression_list.size()-1; i>=0; i--){
+	int init_val = (is_printf ? 0 : expression_list.size()-1);
+	for(int i=init_val;;){
+		if(is_printf && i>=expression_list.size()) break;
+		if(!is_printf && i==-1) break;
+
 		bool is_int = (expression_list[i]->type->basetype == BASETYPE::INT);
 		bool is_string = (expression_list[i]->type->basetype == BASETYPE::STRING);
 		
@@ -377,7 +459,7 @@ void FunCallStmt::gen_code(){
 				assert(is_printf);
 				s = make_instr("print_string",((StringConst*)expression_list[i])->getVal());
 			}
-			if(is_int){
+			else if(is_int){
 				if(is_printf) s = make_instr("print_int",expression_list[i]->vali);
 				else s = make_instr("pushi",expression_list[i]->vali);
 				arg_types.push_back(0);
@@ -402,6 +484,9 @@ void FunCallStmt::gen_code(){
 			}
 		}
 		add_line_to_code(s,true);
+		
+		if(is_printf) i++;
+		else i--;
 	}
 
 	// Return if the function is printf, as it's job is over
@@ -410,7 +495,8 @@ void FunCallStmt::gen_code(){
 		return;
 	}
 	
-	// Push the static link (TODO)
+	// Calculate and Push the static link (TODO)
+	
 	s = make_instr("pushi",0);
 	add_line_to_code(s,true);
 	
@@ -473,6 +559,7 @@ void Identifier::gen_code(){
 void Op::gen_code(){
 
 	if(op_type==OR_OP || op_type==AND_OP){
+		
 		return;
 	}
 	if(op_type==ASSIGN_INT || op_type==ASSIGN_FLOAT){
@@ -716,10 +803,15 @@ void UnOp::gen_code(){
 		
 		// If lhs is identifier, then r contains its value in it
 		if(exp->is_identifier){
-			if(op_type==PP_INT) s = make_instr("addi",1,r);
+			if(op_type==PP_INT) s = make_instr("addi",1,r);			// increment value of r by 1
 			else s = make_instr("addf",1.0f,r);
 			add_line_to_code(s,true);
-			s = make_instr("store"+dtype, r, make_instr("ind",ebp,exp->mem_offset));
+			
+			s = make_instr("store"+dtype, r, make_instr("ind",ebp,exp->mem_offset));	// store incremented value back in lval
+			add_line_to_code(s,true);
+			
+			if(op_type==PP_INT) s = make_instr("addi",-1,r);		// put decremented (i.e. old) value in r
+			else s = make_instr("addf",-1.0f,r);
 			add_line_to_code(s,true);
 		}
 		// But if lhs is arrayref, then r now contains its memory address (viz. pointer)
@@ -729,12 +821,16 @@ void UnOp::gen_code(){
 			rm.push_top(r);											// place back r on top
 			s = make_instr("load"+dtype, make_instr("ind",r), l);	// l <- *(r)
 			add_line_to_code(s,true);
-			if(op_type==PP_INT) s = make_instr("addi",1,r);			// l <- l + 1
+			if(op_type==PP_INT) s = make_instr("addi",1,r);			// l <- l + 1 (increment value by 1)
 			else s = make_instr("addf",1.0f,r);
 			add_line_to_code(s,true);
 			s = make_instr("store"+dtype,l, make_instr("ind",r));	// *(r) <- l
 			add_line_to_code(s,true);
 			s = make_instr("move",l,r);								// r <- l (preparing value in r for return from this node)
+			add_line_to_code(s,true);
+			
+			if(op_type==PP_INT) s = make_instr("addi",-1,r);		// r <- r - 1 (decrement value by 1 and get old value for return)
+			else s = make_instr("addf",-1.0f,r);
 			add_line_to_code(s,true);
 		}
 		else assert(0);
@@ -752,11 +848,11 @@ void UnOp::gen_code(){
 		
 		s = make_instr("cmp"+dtype,0,r);
 		add_line_to_code(s,true);
-		s = make_instr("je",to_string(line_num+3));
+		s = make_instr("je","l"+to_string(line_num+3));
 		add_line_to_code(s,true);
 		s = (!dtype.compare("i")) ? make_instr("move",0,r) : make_instr("move",0.0f,r);
 		add_line_to_code(s,true);
-		s = make_instr("j",to_string(line_num+2));
+		s = make_instr("j","l"+to_string(line_num+2));
 		add_line_to_code(s,true);
 		s = (!dtype.compare("i")) ? make_instr("move",1,r) : make_instr("move",1.0f,r);
 		add_line_to_code(s,true);
@@ -775,6 +871,7 @@ void FunCall::gen_code(){
 	assert(ret_type!=BASETYPE::VOID);
 	string dtype = (ret_type==BASETYPE::INT) ? "i" : "f";
 	
+	assert(name->get_id().compare("main"));					// check that main is not called by any function
 	bool is_printf = (!name->get_id().compare("printf")); 	// Check if function is printf
 	
 	////////////////////////////////////////////////////
@@ -788,7 +885,11 @@ void FunCall::gen_code(){
 	}
 	
 	// Evaluate arguments from right to left and push onto the stack
-	for(int i=expression_list.size()-1; i>=0; i--){
+	int init_val = (is_printf ? 0 : expression_list.size()-1);
+	for(int i=init_val;;){
+		if(is_printf && i>=expression_list.size()) break;
+		if(!is_printf && i==-1) break;
+		
 		bool is_int = (expression_list[i]->type->basetype == BASETYPE::INT);
 		bool is_string = (expression_list[i]->type->basetype == BASETYPE::STRING);
 		
@@ -822,6 +923,9 @@ void FunCall::gen_code(){
 			}
 		}
 		add_line_to_code(s,true);
+		
+		if(is_printf) i++;
+		else i--;
 	}
 	
 	// Return if the function is printf, as it's job is over
@@ -951,7 +1055,7 @@ void ArrayRef::gen_code_addr(){
 				add_line_to_code(s,true);
 				s = make_instr("addi",(indices[i]->vali)*dimension[i],r);	// r <- r + dim[i]*ind[i]
 				add_line_to_code(s,true);
-				s = make_instr("stori",r,make_instr("ind",esp));			// *(esp) <- r
+				s = make_instr("storei",r,make_instr("ind",esp));			// *(esp) <- r
 			}
 			else{
 				indices[i]->gen_code();										// r <- ind[i]
@@ -966,7 +1070,7 @@ void ArrayRef::gen_code_addr(){
 				add_line_to_code(s,true);
 				s = make_instr("addi",r,l);									// l <- r + l
 				add_line_to_code(s,true);
-				s = make_instr("stori",l,make_instr("ind",esp));			// *(esp) <- l
+				s = make_instr("storei",l,make_instr("ind",esp));			// *(esp) <- l
 			}	
 			add_line_to_code(s,true);
 		}

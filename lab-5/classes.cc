@@ -29,6 +29,10 @@ void BlockAst::print(){
 	cout<<"])";
 }
 
+SymbolTable* BlockAst::get_symbol_table(){
+	return symbolTable;
+}
+
 // Print Function for Assignment statement //
 
 void Ass::print(){

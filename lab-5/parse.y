@@ -22,19 +22,17 @@ translation_unit
 	function_definition 
 	{
 		$$ = $1 ;
-		set_global_ST(SymbolTableStack.back());
 		
 		// Print the AST when print_AST is enabled
 		if(print_AST) $1->print();
 		
-		$1->gen_code();
-		print_code();
-		
 		// Print Symbol table when print_symbol_table is enabled
 		if(print_symbol_table){
-			CurrentSymbolTable->print();
+			((BlockAst*)$1)->get_symbol_table()->print();
 			cout<<"-----------------------\n";
 		}
+		
+		$1->gen_code();
 		
 		// Restoring Environment
 		CurrentSymbolTable = SymbolTableStack.back();
@@ -46,19 +44,17 @@ translation_unit
 	| translation_unit function_definition
 	{
 		$$ = $1 ;
-		set_global_ST(SymbolTableStack.back());
 		
 		// Print the AST when print_AST is enabled
 		if(print_AST) $2->print();
 
-		$2->gen_code();
-		print_code();
-		
 		// Print Symbol table when print_symbol_table is enabled
 		if(print_symbol_table){
-			CurrentSymbolTable->print();
+			((BlockAst*)$2)->get_symbol_table()->print();
 			cout<<"-----------------------\n";
 		}
+		
+		$2->gen_code();
 		
 		// Restoring Environment
 		CurrentSymbolTable = SymbolTableStack.back();
@@ -132,9 +128,9 @@ fun_declarator
 			cout<<"Error at line "<<line_no<<" : Function "<<$1<<" Redefined\n";
 
 		SymbolTableStack.push_back(CurrentSymbolTable);
-		CurrentSymbolTable = temp;
 		offsetStack.push_back(global_offset);
-		CurrentSymbolTable->return_offset = global_offset;
+		CurrentSymbolTable = temp;
+		CurrentSymbolTable->return_offset = 8;
 		global_offset = -4;
 		offset_multiplier = -1;
 
@@ -732,9 +728,17 @@ declaration
 	| function_definition
 	{
 		$$ = $1 ;
-		CurrentSymbolTable->print();
-		$1->print();
-		cout<<"-----------------------\n";
+		
+		// Print the AST when print_AST is enabled
+		if(print_AST) $1->print();
+		
+		// Print Symbol table when print_symbol_table is enabled
+		if(print_symbol_table){
+			((BlockAst*)$1)->get_symbol_table()->print();
+			cout<<"-----------------------\n";
+		}
+		
+		$1->gen_code();
 
 		// Restoring Environment
 		CurrentSymbolTable = SymbolTableStack.back();

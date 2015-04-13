@@ -1,10 +1,9 @@
-all: a.out
+all: assembler
 
-a.out: machine.cc code.asm
-	g++ -g3 -O0 machine.cc
-
+assembler: machine.cc code.asm
+	g++ -std=c++11 -g3 -m32 -O0 machine.cc
 
 .PHONY: clean
-	
+
 clean:
-	rm a.out
+	rm assembler

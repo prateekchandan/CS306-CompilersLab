@@ -5,6 +5,7 @@
 #include <stack>
 #include <cstdlib>
 #include <string>
+#include <utility>
 #include <assert.h>
 using namespace std;
 
@@ -134,6 +135,7 @@ class BlockAst : public StmtAst {
 	}
 	void print();
 	void add_statement(StmtAst *e);
+	SymbolTable* get_symbol_table();
 	void gen_code();
 };
 
@@ -399,6 +401,7 @@ class StringConst : public ExpAst {
 	public:
 	StringConst(){
 		is_const = true;
+		type = new TYPE(BASETYPE::STRING);
 	}
 	StringConst(string s){
 		is_const = true;

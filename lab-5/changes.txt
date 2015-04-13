@@ -3,8 +3,8 @@
 -> calculate the level of nestedness of a function in its symbol table in attribute 'level' (while parsing)
 -> what is the return type of printf ?
 -> if int is passed as argument, while float was expected (or vice-versa), do type casting
-
-[[[[-> unary operator constructor mein haga -_-]]]
+-> [[[[-> unary operator constructor mein haga -_-]]]
+-> printf to be done from left to right
 
 --------------------------------------------------------------
 float gcd(int a, int b, int c, float f1, float f2, int d){

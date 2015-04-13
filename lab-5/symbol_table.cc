@@ -184,7 +184,7 @@ void SymbolTableEntry::print(){
 		case SCOPE::GLOBAL : cout<<"global"; break;
 	}
 	
-	cout<<" size:"<<size;
+	cout<<"\tsize:"<<size;
 	cout<<"\t";
 	switch(vf){
 		case VAR_OR_FUNC::VAR : cout<<"variable"; break;
@@ -236,6 +236,21 @@ vector<BASETYPE> SymbolTable::get_param_types(){
 
 string SymbolTable::get_name(){
 	return name;
+}
+
+void SymbolTable::get_local_offsets(map<int,pair<bool,int> > &locals){
+	map<string,SymbolTableEntry*>::iterator it = Entry.begin();
+	for(; it!=Entry.end(); it++){
+		if((it->second)->scope==LOCAL && (it->second)->vf==VAR){
+			int offset_of_local = (it->second)->offset;
+			bool is_float = ((it->second)->type->basetype==FLOAT);
+			int count = (it->second)->size/(is_float?4:4);	// total no. of elements of arrayref (=1 if basetype)
+			
+			assert(locals.find(offset_of_local)==locals.end());	// check that offset not same for 2 variables
+			locals[offset_of_local] = make_pair(is_float,count);
+		}
+	}
+	return;
 }
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
