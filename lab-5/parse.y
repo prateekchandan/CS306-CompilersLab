@@ -251,6 +251,12 @@ statement
 				cout<<"Error at line "<<line_no<<" : In call to function "<<$1<<": 0 Parameters passed but "<<num<<" required\n";
 				exit(0);
 			}
+			SymbolTable* temp = GetSymbolTableForFunc($1);
+			((FunCallStmt*)$$)->table = temp;
+			if (temp == NULL){
+				cout<<"Error at line "<<line_no<<" : SymbolTable for "<<$1<<" Undefined\n";
+				exit(0);
+			}
 		}
 	}
 	| IDENTIFIER '(' expression_list ')' ';'
@@ -271,6 +277,12 @@ statement
 				exit(0);
 			}
 			validateBasetypes(GetFuncParamTypes($1),((FunCallStmt*)$$)->expression_list,line_no);
+			SymbolTable* temp = GetSymbolTableForFunc($1);
+			((FunCallStmt*)$$)->table = temp;
+			if (temp == NULL){
+				cout<<"Error at line "<<line_no<<" : SymbolTable for "<<$1<<" Undefined\n";
+				exit(0);
+			}
 		}
 	}
 	;
@@ -530,6 +542,12 @@ postfix_expression
 				cout<<"Error at line "<<line_no<<" : In call to function "<<$1<<": 0 Parameters passed but "<<num<<" required\n";
 				exit(0);
 			}
+			SymbolTable* temp = GetSymbolTableForFunc($1);
+			((FunCall*)$$)->table = temp;
+			if (temp == NULL){
+				cout<<"Error at line "<<line_no<<" : SymbolTable for "<<$1<<" Undefined\n";
+				exit(0);
+			}
 		}
 	}
 	| IDENTIFIER '(' expression_list ')'
@@ -553,6 +571,12 @@ postfix_expression
 				exit(0);
 			}
 			validateBasetypes(GetFuncParamTypes($1),((FunCall*)$$)->expression_list,line_no);
+			SymbolTable* temp = GetSymbolTableForFunc($1);
+			((FunCall*)$$)->table = temp;
+			if (temp == NULL){
+				cout<<"Error at line "<<line_no<<" : SymbolTable for "<<$1<<" Undefined\n";
+				exit(0);
+			}
 		}
 	}
 	| l_expression INC_OP

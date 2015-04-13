@@ -230,6 +230,7 @@ class FunCallStmt : public StmtAst {
 	
 	public:
 	vector<ExpAst*> expression_list;
+	SymbolTable* table;
 	
 	FunCallStmt() {}
 	FunCallStmt(Identifier *i){
@@ -340,6 +341,7 @@ class FunCall : public ExpAst {
 	
 	public:
 	vector<ExpAst*> expression_list;
+	SymbolTable* table;
 	
 	FunCall() {}
 	FunCall(Identifier *i){
