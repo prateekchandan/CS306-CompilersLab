@@ -75,6 +75,7 @@ class abstract_astnode {
 
 class StmtAst : public abstract_astnode {
 	public:
+	vector<int> next_list;
 	virtual void print () = 0;
 	virtual void gen_code() = 0;
 };
@@ -92,6 +93,11 @@ class ExpAst : public abstract_astnode {
 	bool is_identifier = false;
 	bool is_const = false;
 	bool is_arrayref = false;
+	
+	// These are required for short-circuiting of logical exps
+	bool fall;
+	vector<int> truelist;
+	vector<int> falselist;
 	
 	virtual void print () = 0;
 	virtual void gen_code() = 0;
