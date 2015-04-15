@@ -391,13 +391,15 @@ void BlockAst::gen_code(){
 	}
 	
 	// Now call gen_code on each of the block's statement
+	statements.back()->is_last = true;
 	for(int i=0; i<statements.size(); i++){
-		if(i!=0) put_label = !statements[i-1]->next_list.empty();
-		statements[i]->gen_code();
-		if(i < statements.size()-1){	// for all statements except last one
-			back_patch(statements[i]->next_list,"l"+to_string(label_num));
+		// backpatch the previous statement (if non-empty) with current label num
+		if(i>0 && !statements[i-1]->next_list.empty()){
+			back_patch(statements[i-1]->next_list,"l"+to_string(label_num));
+			put_label = true;
 		}
-		else{							// for last statement
+		statements[i]->gen_code();
+		if(i == statements.size()-1){		// for last statement
 			if(changed_scope) back_patch(statements[i]->next_list,"e");
 			else copy_list(statements[i]->next_list,next_list);
 		}
@@ -489,15 +491,16 @@ void Ass::gen_code(){
 void ReturnSt::gen_code(){
 	assert(currentST->returnType->basetype!=BASETYPE::VOID);
 
-	string s;
 	Reg r = rm.get_top();			// Top register (will have the answer of evaluated exp)
-	string dtype = (exp->type->basetype==BASETYPE::INT)?"i":"f";
+	bool is_int = (exp->type->basetype==BASETYPE::INT);
+	string dtype = is_int?"i":"f";
 
 	if(exp->is_const){
-		if(!dtype.compare("i"))
-			make_instr("storei",exp->vali,make_index(ebp,currentST->return_offset));
-		else
-			make_instr("storef",exp->valf,make_index(ebp,currentST->return_offset));
+		bool zero_val = is_int ? (exp->vali==0) : (exp->valf==0);
+		if(!zero_val){
+			if(is_int) make_instr("storei",exp->vali,make_index(ebp,currentST->return_offset));
+			else make_instr("storef",exp->valf,make_index(ebp,currentST->return_offset));
+		}
 	}
 	else{
 		exp->gen_code();
@@ -510,6 +513,7 @@ void ReturnSt::gen_code(){
 
 void If::gen_code(){
 	bool is_int = (cond->type->basetype==BASETYPE::INT);
+	
 	if(cond->is_const){
 		bool is_false = (is_int ? (cond->vali == 0) : (cond->valf == 0.0f));
 		if(is_false){
@@ -525,11 +529,14 @@ void If::gen_code(){
 		cond->is_cond = true;											// inform cond that it is to be evaluated as conditional
 		cond->fall = true;												// call gen_code on cond expression with fall marked true
 		cond->gen_code();
-		statement1->gen_code();											// generate code for stmt-1
+		back_patch(cond->true_list,"l"+to_string(label_num));			// back patch cond's truelist now with the label of stmt-1
+		put_label = true;
+		statement1->gen_code();											// generate code for stmt-1 with put label marked true
 		int line = add_line_to_code("j");								// add an unconditional jump statement to go out
 		next_list.push_back(line);										// add this jump statement to the If statement's next list
 		back_patch(cond->false_list,"l"+to_string(label_num));			// back patch cond's falselist now with the label of stmt-2
-		statement2->gen_code();											// gen code for stmt-2
+		put_label = true;
+		statement2->gen_code();											// generate code for stmt-2 with put label marked true
 		merge(statement1->next_list,statement2->next_list,next_list);	// merge & add next lists of stmt-1 and stmt-2 into next list
 	}
 	return;
@@ -537,6 +544,7 @@ void If::gen_code(){
 
 void While::gen_code(){
 	bool is_int = (cond->type->basetype==BASETYPE::INT);
+	
 	if(cond->is_const){
 		bool is_false = (is_int ? (cond->vali == 0) : (cond->valf == 0.0f));
 		if(is_false); // do nothing
@@ -547,16 +555,17 @@ void While::gen_code(){
 			add_line_to_code("j(l"+to_string(stmt_label)+");");			// add an unconditional jump after stmt leading back to it
 			back_patch(statement->next_list,"l"+to_string(stmt_label));	// backpatch next list of stmt back to itself
 		}
-		
 	}
 	else{
 		cond->is_cond = true;											// inform cond that it is to be evaluated as conditional
 		put_label = true;												// set this to true, as cond evaluation needs a label
-		int cond_label = label_num;										// note the to be given label number
+		int cond_label = label_num;										// note the 'to be given' label number
 		cond->fall = true;												// call gen_code on cond expression with fall marked true
 		cond->gen_code();
+		back_patch(cond->true_list,"l"+to_string(label_num));			// back patch cond's truelist with the label stmt would take
+		put_label = true;
 		statement->gen_code();											// generate code for stmt
-		back_patch(statement->next_list,"l"+to_string(cond_label));	// backpatch next list of statement to cond
+		back_patch(statement->next_list,"l"+to_string(cond_label));		// backpatch next list of statement to cond
 		add_line_to_code("j(l"+to_string(cond_label)+");");				// add an unconditional jump statement back to cond
 		copy_list(cond->false_list, next_list);							// copy false_list of cond into the while's next list
 	}
@@ -564,24 +573,22 @@ void While::gen_code(){
 }
 
 void For::gen_code(){
-	init->fall = true;													// set fall of init expression to true (note:init is not logic op)
-	init->gen_code();													// generate code for init
+	init->gen_code();													// generate code for init (clearly as a normal expression)
 	int cond_label = label_num;											// note the 'to be given' label number of cond
-	back_patch(init->false_list,"l"+to_string(cond_label));				// back patch false list of init with cond (for safety)
 	
 	put_label = true;													// set this to true, as cond evaluation needs a label
-	cond->is_cond = true;											// inform cond that it is to be evaluated as conditional
+	cond->is_cond = true;												// inform cond that it is to be evaluated as conditional
 	cond->fall = true;													// set fall of cond expression to true
 	cond->gen_code();													// generate code for cond
-	statement->gen_code();												// generate code for statement
-	int step_label = label_num;											// note the 'to be given' label number of step
-	back_patch(statement->next_list,"l"+to_string(step_label));			// backpatch next list of stmt with label of step
+	back_patch(cond->true_list,"l"+to_string(label_num));				// back patch cond's truelist with the label stmt would take
 	
-	step->fall = true;													// set fall of step expression to true (note:step is not logic op)
-	put_label = true;													// set this to true, as step evaluation needs a label
-	step->gen_code();													// generate code for step
+	put_label = true;
+	statement->gen_code();												// generate code for statement with put label marked true
+	back_patch(statement->next_list,"l"+to_string(label_num));			// backpatch next list of stmt with the label step would take
+	
+	put_label = true;
+	step->gen_code();													// generate code for step with put label marked true
 	add_line_to_code("j(l"+to_string(cond_label)+");");					// add an unconditional jump statement back to cond
-	back_patch(step->false_list,"l"+to_string(cond_label));				// back patch false list of step with cond (for safety)
 	
 	copy_list(cond->false_list,next_list);								// copy false list of cond into next list of the 'for' stmt
 	return;
@@ -693,7 +700,6 @@ void FunCallStmt::gen_code(){
 /////////////////////////////////////////////////////////////////////////////
 
 void Identifier::gen_code(){
-
 	assert(type->child == NULL);					// Check that it is not an array type	
 	Reg r = rm.get_top();							// Get the top-most free register
 	bool is_int = (type->basetype == BASETYPE::INT);
@@ -702,28 +708,28 @@ void Identifier::gen_code(){
 	else if(type->basetype == BASETYPE::FLOAT) make_instr("loadf",make_index(ebp,mem_offset),r);
 	else assert(0);
 	
-	reg_addr = r;									// Set the address attribute of the node
 	// If node is a conditional, then add control flow instructions
 	if(is_cond){
 		is_int ? make_instr("cmpi",0,r) : make_instr("cmpf",0.0f,r);
 		if(fall) false_list.push_back(add_line_to_code("je"));
 		else true_list.push_back(add_line_to_code("jne"));
 	}
+	reg_addr = r;
 	return;
 }
 
 void Op::gen_code(){
+	
 	assert(!is_const);
+	bool is_int = (type->basetype == BASETYPE::INT);
+	string op, dtype = is_int ? "i" : "f";
+	Reg r = rm.get_top();
 	
 	if(op_type==ASSIGN_INT || op_type==ASSIGN_FLOAT){
-		string dtype = (op_type==ASSIGN_INT) ? "i":"f";
-		string s;
-		
 		if(left->is_identifier){
-			Reg r = rm.get_top();
 			if(right->is_const){
 				// If right side is constant, use immediate operation (also put that value in top register for return of this node)
-				if(op_type==ASSIGN_INT){
+				if(is_int){
 					make_instr("storei", right->vali, make_index(ebp,left->mem_offset));
 					make_instr("move", right->vali, r);
 				}
@@ -737,15 +743,12 @@ void Op::gen_code(){
 				right->gen_code();
 				make_instr("store"+dtype, r, make_index(ebp,left->mem_offset));
 			}
-			// Now mark that the value of this node is kept on the top free register
-			reg_addr = r;
 		}
 		else if(left->is_arrayref){
 			((ArrayRef*)left)->gen_code_addr();
-			Reg r = rm.get_top();
 			if(right->is_const){
 				// If right side is constant, use immediate operation (also put that value in top register for return of this node)
-				if(op_type==ASSIGN_INT){
+				if(is_int){
 					make_instr("storei",right->vali, make_index(r));
 					make_instr("move", right->vali, r);
 				}
@@ -766,7 +769,6 @@ void Op::gen_code(){
 				make_instr("pop"+dtype, 1);							// pop the saved value from stack
 				make_instr("store"+dtype, r, make_index(l)); 		// store the calculated rhs value in lhs's index
 			}
-			reg_addr = r;
 		}
 		else assert(0);
 	}
@@ -774,28 +776,20 @@ void Op::gen_code(){
 	else if(op_type==PLUS_INT || op_type==PLUS_FLOAT || op_type==MULT_INT || op_type==MULT_FLOAT ||
 		op_type==MINUS_INT || op_type==MINUS_FLOAT || op_type==DIV_INT || op_type==DIV_FLOAT){
 		
-		string op, dtype;
-		Reg r = rm.get_top();
-		
 		// Find the suitable op
 		if(op_type==PLUS_INT || op_type==PLUS_FLOAT || 
 			op_type==MINUS_INT || op_type==MINUS_FLOAT) op = "add";
 		else if(op_type==MULT_INT || op_type==MULT_FLOAT) op = "mul";
 		else op = "div";
 		
-		// Find the suitable datatype
-		if(op_type==PLUS_INT || op_type==MULT_INT || op_type==MINUS_INT || op_type==DIV_INT) dtype="i";
-		else dtype = "f";
-		
 		// Booleans for checking if sub or div operation
 		bool is_sub = (op_type==MINUS_INT || op_type==MINUS_FLOAT);
 		bool is_div = (op_type==DIV_INT || op_type==DIV_FLOAT);
-		string s;
 		
 		if(left->is_const || right->is_const){
 			if(left->is_const){				// If Left register has constant value
 				right->gen_code();
-				if(!dtype.compare("i")){
+				if(is_int){
 					if(is_sub) make_instr("muli", -1, r);
 					make_instr(op+dtype,left->vali,r);
 				}
@@ -804,10 +798,10 @@ void Op::gen_code(){
 					make_instr(op+dtype,left->valf,r);
 				}
 			}
-			else if(right->is_const){			// If Right register has constant value
-				if(!dtype.compare("i")){
+			else if(right->is_const){		// If Right register has constant value
+				if(is_int){
 					if(is_div){
-						rm.swap_top();		// Swap registers and evaluate left side if div operation
+						rm.swap_top();			// Swap registers and evaluate left side if div operation
 						Reg l = rm.get_top();
 						left->gen_code();
 						rm.swap_top();
@@ -815,7 +809,7 @@ void Op::gen_code(){
 						make_instr("divi",l,r);
 					}
 					else{
-						left->gen_code();	// Evaluate left side first if not div operation
+						left->gen_code();		// Evaluate left side first if not div operation
 						if(is_sub) make_instr(op+dtype,-right->vali,r);
 						else make_instr(op+dtype,right->vali,r);
 					}
@@ -848,10 +842,9 @@ void Op::gen_code(){
 				rm.push_top(r);
 				
 				if(is_sub){												// negate the value of right register if sub operation
-					if(!dtype.compare("i"))	make_instr("muli", -1, r);
+					if(is_int) make_instr("muli", -1, r);
 					else make_instr("mulf", -1.0f, r);
 				}
-				
 				make_instr(op+dtype,l,r);
 			}
 			else{											// Current node has exactly 2 registers & left is not identifier
@@ -864,17 +857,13 @@ void Op::gen_code(){
 				make_instr("pop"+dtype,1);								// pop the stored value from stack
 				
 				if(is_sub){												// negate the value of right register if sub operation
-					if(!dtype.compare("i")) make_instr("muli", -1, r);
+					if(is_int) make_instr("muli", -1, r);
 					else make_instr("mulf", -1.0f, r);
 				}
-				
 				make_instr(op+dtype,l,r);								// r <- (l op r)
 				rm.swap_top();											// swap back the top 2 registers into original position
 			}
 		}
-		
-		reg_addr = r;
-		return;
 	}
 	
 	else if(op_type==OR_OP || op_type==AND_OP){
@@ -934,24 +923,17 @@ void Op::gen_code(){
 			if(l_const || r_const){
 				if(l_const) right->gen_code();
 				else left->gen_code();
-				
-				bool is_float = (l_const)? !dtype2.compare("f") : !dtype1.compare("f");
-				if(is_float){
-					make_instr("cmp"+dtype2,0,r);
-					add_line_to_code("je(l"+to_string(label_num)+");");
-					make_instr("move",1,r);
-					add_line_to_code("j(l"+to_string(label_num+1)+");");
-					put_label=true;
-					make_instr("move",0,r);
-					put_label = true;
-				}
 			}
 			else{
 				left->gen_code();
-				make_instr("cmp"+dtype1,0,r);
-				if(is_and){
-					add_line_to_code("je(l"+to_string(label_num)+");");
-				}
+				make_instr("cmpi",0,r);
+				int line;
+				if(is_and) line = add_line_to_code("je");
+				else line = add_line_to_code("jne");
+				
+				right->gen_code();
+				back_patch(line,"l"+to_string(label_num));
+				put_label = true;
 			}
 		}
 		reg_addr = r;
@@ -991,6 +973,14 @@ void Op::gen_code(){
 		* */
 	}
 	
+	// If node is a conditional, then add control flow instructions
+	if(is_cond){
+		is_int ? make_instr("cmpi",0,r) : make_instr("cmpf",0.0f,r);
+		if(fall) false_list.push_back(add_line_to_code("je"));
+		else true_list.push_back(add_line_to_code("jne"));
+	}
+	reg_addr = r;
+	return;
 }
 
 void UnOp::gen_code(){
@@ -1067,13 +1057,13 @@ void UnOp::gen_code(){
 		return;
 	}
 	
-	reg_addr = r;
 	// If node is a conditional, then add control flow instructions
 	if(is_cond){
 		is_int ? make_instr("cmpi",0,r) : make_instr("cmpf",0.0f,r);
 		if(fall) false_list.push_back(add_line_to_code("je"));
 		else true_list.push_back(add_line_to_code("jne"));
 	}
+	reg_addr = r;
 	return;
 }
 
@@ -1185,13 +1175,13 @@ void FunCall::gen_code(){
 	// Load the registers which were saved
 	rm.load_registers(in_use, is_int);
 	
-	reg_addr = r1;
 	// If node is a conditional, then add control flow instructions
 	if(is_cond){
 		(ret_type==BASETYPE::INT) ? make_instr("cmpi",0,r1) : make_instr("cmpf",0.0f,r1);
 		if(fall) false_list.push_back(add_line_to_code("je"));
 		else true_list.push_back(add_line_to_code("jne"));
 	}
+	reg_addr = r1;
 	return;
 }
 

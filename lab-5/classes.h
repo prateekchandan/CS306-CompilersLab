@@ -76,6 +76,8 @@ class abstract_astnode {
 class StmtAst : public abstract_astnode {
 	public:
 	vector<int> next_list;
+	bool is_last = false;	// marks if statement is the last in the block
+	
 	virtual void print () = 0;
 	virtual void gen_code() = 0;
 };
@@ -168,7 +170,7 @@ class ReturnSt : public StmtAst {
 	ExpAst *exp;
 	
 	public:
-	ReturnSt() {}
+	ReturnSt(){}
 	ReturnSt(ExpAst *r) {
 		exp = r;
 	}
@@ -270,10 +272,8 @@ class Op : public ExpAst {
 		right = r;
 		if(l->is_const && r->is_const){
 			is_const = true;
-			if(o==AND_OP) vali = ((l->type->basetype==INT)?(l->vali!=0):(l->valf!=0.0) &&
-								 (r->type->basetype==INT)?(r->vali!=0):(r->valf!=0.0));
-			if(o==OR_OP) vali = ((l->type->basetype==INT)?(l->vali!=0):(l->valf!=0.0) ||
-								(r->type->basetype==INT)?(r->vali!=0):(r->valf!=0.0));					
+			if(o==AND_OP) vali = (l->vali!=0 && r->vali!=0);
+			if(o==OR_OP) vali = (l->vali!=0 || r->vali!=0);					
 			if(o==PLUS_INT) vali = l->vali + r->vali;
 			if(o==PLUS_FLOAT) valf = l->valf + r->valf;
 			if(o==MINUS_INT) vali = l->vali - r->vali;
@@ -295,17 +295,9 @@ class Op : public ExpAst {
 			if(o==GE_OP_INT) vali = (l->vali >= r->vali);
 			if(o==GE_OP_FLOAT) vali = (l->valf >= r->valf);
 		}
-		else if(o==OR_OP){
-			if(l->is_const)
-				is_const = (l->type->basetype==INT) ? (l->vali!=0) : (l->valf!=0.0);
-			else if(r->is_const)
-				is_const = (r->type->basetype==INT) ? (r->vali!=0) : (r->valf!=0.0);
-		}
-		else if(o==AND_OP){
-			if(l->is_const)
-				is_const = (l->type->basetype==INT) ? (l->vali==0) : (l->valf==0.0);
-			else if(r->is_const)
-				is_const = (r->type->basetype==INT) ? (r->vali==0) : (r->valf==0.0);
+		else if(l->is_const || r->is_const){
+			if(o==OR_OP) is_const = (l->is_const) ? (l->vali!=0) : (r->vali!=0);
+			if(o==AND_OP) is_const = (l->is_const) ? (l->vali==0) : (r->vali==0.0);
 		}
 		return;
 	}

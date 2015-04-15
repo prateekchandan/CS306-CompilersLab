@@ -201,7 +201,11 @@ statement_list
 	;
 
 statement
-	: '{' statement_list '}'
+	: '{' '}'
+	{
+		$$ = new Ass(NULL,NULL);
+	}
+	| '{' statement_list '}'
 	{
 		$$ = $2;
 	}
