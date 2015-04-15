@@ -22,4 +22,4 @@ Scanner.h: lex.l
 Scannerbase.h: lex.l
 
 clean:
-	rm -rf Parser* Scanner* compiler code.asm junk* lex.cc parse.cc graph1*
+	rm -rf Parser* Scanner* compiler code.asm junk* lex.cc parse.cc graph1* a.out

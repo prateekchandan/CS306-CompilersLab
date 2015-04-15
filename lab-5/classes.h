@@ -94,10 +94,11 @@ class ExpAst : public abstract_astnode {
 	bool is_const = false;
 	bool is_arrayref = false;
 	
+	bool is_cond = false;		// tells whether the expression is to be evaluated as normal exp or as condition exp
 	// These are required for short-circuiting of logical exps
-	bool fall;
-	vector<int> truelist;
-	vector<int> falselist;
+	bool fall;					// required for fall through
+	vector<int> true_list;
+	vector<int> false_list;
 	
 	virtual void print () = 0;
 	virtual void gen_code() = 0;
@@ -269,17 +270,46 @@ class Op : public ExpAst {
 		right = r;
 		if(l->is_const && r->is_const){
 			is_const = true;
-			if(o==OP_TYPE::PLUS_INT) vali = l->vali + r->vali;
-			if(o==OP_TYPE::PLUS_FLOAT) valf = l->valf + r->valf;
-			if(o==OP_TYPE::MINUS_INT) vali = l->vali - r->vali;
-			if(o==OP_TYPE::MINUS_FLOAT) valf = l->valf - r->valf;
-			if(o==OP_TYPE::MULT_INT) vali = l->vali * r->vali;
-			if(o==OP_TYPE::MULT_FLOAT) valf = l->valf * r->valf;
-			if(o==OP_TYPE::DIV_INT) vali = l->vali / r->vali;
-			if(o==OP_TYPE::DIV_FLOAT) valf = l->valf / r->valf;
-			return;
+			if(o==AND_OP) vali = ((l->type->basetype==INT)?(l->vali!=0):(l->valf!=0.0) &&
+								 (r->type->basetype==INT)?(r->vali!=0):(r->valf!=0.0));
+			if(o==OR_OP) vali = ((l->type->basetype==INT)?(l->vali!=0):(l->valf!=0.0) ||
+								(r->type->basetype==INT)?(r->vali!=0):(r->valf!=0.0));					
+			if(o==PLUS_INT) vali = l->vali + r->vali;
+			if(o==PLUS_FLOAT) valf = l->valf + r->valf;
+			if(o==MINUS_INT) vali = l->vali - r->vali;
+			if(o==MINUS_FLOAT) valf = l->valf - r->valf;
+			if(o==MULT_INT) vali = l->vali * r->vali;
+			if(o==MULT_FLOAT) valf = l->valf * r->valf;
+			if(o==DIV_INT) vali = l->vali / r->vali;
+			if(o==DIV_FLOAT) valf = l->valf / r->valf;
+			if(o==EQ_OP_INT) vali = (l->vali == r->vali);
+			if(o==EQ_OP_FLOAT) vali = (l->valf == r->valf);
+			if(o==NE_OP_INT) vali = (l->vali != r->vali);
+			if(o==NE_OP_FLOAT) vali = (l->valf != r->valf);
+			if(o==LT_INT) vali = (l->vali < r->vali);
+			if(o==LT_FLOAT) vali = (l->valf < r->valf);
+			if(o==LE_OP_INT) vali = (l->vali <= r->vali);
+			if(o==LE_OP_FLOAT) vali = (l->valf <= r->valf);
+			if(o==GT_INT) vali = (l->vali > r->vali);
+			if(o==GT_FLOAT) vali = (l->valf > r->valf);
+			if(o==GE_OP_INT) vali = (l->vali >= r->vali);
+			if(o==GE_OP_FLOAT) vali = (l->valf >= r->valf);
 		}
+		else if(o==OR_OP){
+			if(l->is_const)
+				is_const = (l->type->basetype==INT) ? (l->vali!=0) : (l->valf!=0.0);
+			else if(r->is_const)
+				is_const = (r->type->basetype==INT) ? (r->vali!=0) : (r->valf!=0.0);
+		}
+		else if(o==AND_OP){
+			if(l->is_const)
+				is_const = (l->type->basetype==INT) ? (l->vali==0) : (l->valf==0.0);
+			else if(r->is_const)
+				is_const = (r->type->basetype==INT) ? (r->vali==0) : (r->valf==0.0);
+		}
+		return;
 	}
+	
 	void print();
 	void gen_code();	
 };
@@ -294,24 +324,20 @@ class UnOp : public ExpAst {
 	UnOp() {}
 	UnOp(int o) {
 		op_type = o;
-		if(o==UMINUS_INT||o==PP_INT||o==TO_INT||o==NOT) type = new TYPE(INT);
-		else type = new TYPE(FLOAT);
 	}
 	UnOp(int o, ExpAst *e) {
 		op_type = o;
-		if(o==NOT) type = new TYPE(e->type->basetype);
-		else if(o==UMINUS_INT||o==PP_INT||o==TO_INT) type = new TYPE(INT);
-		else type = new TYPE(FLOAT);
-		
-		type = new TYPE(e->type->basetype);
+		if(o==TO_INT) type = new TYPE(INT);
+		if(o==TO_FLOAT) type = new TYPE(FLOAT);
 		exp = e;
+		
 		if(e->is_const){
 			is_const = true;
-			if(o==UNOP_TYPE::UMINUS_INT) vali = -e->vali;
-			if(o==UNOP_TYPE::UMINUS_FLOAT) valf = -e->valf;
-			if(o==UNOP_TYPE::TO_INT) vali = e->valf;
-			if(o==UNOP_TYPE::TO_FLOAT) valf = e->vali;
-			if(op_type==UNOP_TYPE::NOT){
+			if(o==UMINUS_INT) vali = -e->vali;
+			if(o==UMINUS_FLOAT) valf = -e->valf;
+			if(o==TO_INT) vali = e->valf;
+			if(o==TO_FLOAT) valf = e->vali;
+			if(op_type==NOT){
 				if(type->basetype==BASETYPE::INT){
 					if(e->vali != 0) vali = 0;
 					else vali = 1;
@@ -328,12 +354,6 @@ class UnOp : public ExpAst {
 	}
 	void set_type(int o){
 		op_type = o;
-		if(o==NOT){
-			if(exp!=NULL && exp->type != NULL) type = new TYPE(exp->type->basetype);
-			else type = new TYPE(INT);
-		}
-		else if(o==UMINUS_INT||o==PP_INT||o==TO_INT) type = new TYPE(INT);
-		else type = new TYPE(FLOAT);
 	}
 	void set_expression(ExpAst *e);
 	void print();
@@ -369,6 +389,9 @@ class FloatConst : public ExpAst {
 	public:
 	FloatConst(){
 		is_const = true;
+		val = 0.0;
+		valf = 0.0;
+		type = new TYPE(BASETYPE::FLOAT);
 	}
 	FloatConst(float f){
 		is_const = true;
@@ -389,6 +412,9 @@ class IntConst : public ExpAst {
 	public:
 	IntConst(){
 		is_const = true;
+		val = 0;
+		vali = 0;
+		type = new TYPE(BASETYPE::INT);
 	}
 	IntConst(int i){
 		is_const = true;
@@ -409,6 +435,7 @@ class StringConst : public ExpAst {
 	public:
 	StringConst(){
 		is_const = true;
+		val = "";
 		type = new TYPE(BASETYPE::STRING);
 	}
 	StringConst(string s){
@@ -446,6 +473,3 @@ class ArrayRef : public ExpAst {
 	void gen_code();
 	void gen_code_addr();
 };
-
-// Helper function declared here
-void gen_code_helper(FunCall *func, FunCallStmt *func1, int t);

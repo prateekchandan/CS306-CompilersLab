@@ -99,7 +99,7 @@ fun_declarator
 		CurrentSymbolTable = temp;
 		offsetStack.push_back(global_offset);
 		global_offset = 8;
-
+		offset_multiplier = 1;
 	} 
 	parameter_list ')'
 	{
