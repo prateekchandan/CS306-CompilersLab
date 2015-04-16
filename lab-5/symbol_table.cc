@@ -143,6 +143,24 @@ SymbolTable* GetSymbolTableForFunc(string s){
 	return NULL;
 }
 
+SymbolTable* GetSymbolTableForIdentifier(string s){
+	SymbolTable* temp = CurrentSymbolTable;
+	SymbolTableEntry* ret = temp->GetEntry(s);
+	if(ret!=NULL){
+		temp;
+	}
+	for (int i = SymbolTableStack.size()-1; i >= 0  ; --i)
+	{
+		temp = SymbolTableStack[i];
+		ret = temp->GetEntry(s);
+		if(ret!=NULL){
+			return temp;
+		}
+	}
+	return NULL;
+}
+
+
 //validates if the function signature is correct and then typecasts if required
 void validateBasetypes(vector<BASETYPE> b,vector<ExpAst*> &a,int line_no){
 	for(int i=0;i<b.size();++i){

@@ -88,8 +88,8 @@ fun_declarator
 		SymbolTable *temp = new SymbolTable($1);
 		temp->nested_level = SymbolTableStack.size();
 		$$->table = temp;
-		
 		temp->returnType = curr_type;
+		temp->parent = CurrentSymbolTable;
 
 		bool check = CurrentSymbolTable->AddEntry($1,$$);
 		if(!check)
@@ -123,6 +123,8 @@ fun_declarator
 		temp->nested_level = SymbolTableStack.size();
 		$$->table = temp;
 		temp->returnType = curr_type;
+		temp->parent = CurrentSymbolTable;
+
 		bool check=CurrentSymbolTable->AddEntry($1,$$);
 		if(!check)
 			cout<<"Error at line "<<line_no<<" : Function "<<$1<<" Redefined\n";
@@ -683,6 +685,9 @@ l_expression
 			cout<<"Error at line "<<line_no<<" :"<<$1<<" Undefined\n";
 			exit(0);
 		}
+		// defined_at for Identifier
+		((Identifier*)$$)->defined_at = GetSymbolTableForIdentifier($1);
+
 		if(CurrentSymbolTable->GetEntry($1) != NULL){
 			$$->mem_offset = CurrentSymbolTable->GetEntry($1)->offset;
 		}
@@ -711,11 +716,13 @@ l_expression
 			if(CurrentSymbolTable->GetEntry(name) != NULL){
 				$$->mem_offset = CurrentSymbolTable->GetEntry(name)->offset;
 			}
+			((ArrayRef*)$$)->defined_at = ((Identifier*)$1)->defined_at;
 		}
 		else{
 			// We are recursive step
 			$$ = new ArrayRef((ArrayRef*)$1);
 			((ArrayRef*)$$)->add_index($3);
+			((ArrayRef*)$$)->defined_at = ((ArrayRef*)$1)->defined_at;
 		}
 		
 		$$->type = temp;

@@ -115,6 +115,9 @@ class Identifier : public ExpAst {
 	string id;
 	
 	public:
+
+	SymbolTable* defined_at;
+
 	Identifier(){
 		is_identifier = true;
 	}
@@ -447,6 +450,9 @@ class ArrayRef : public ExpAst {
 	vector<ExpAst*> indices;
 	
 	public:
+
+	SymbolTable* defined_at;
+
 	ArrayRef(){
 		is_arrayref = true;
 	}
