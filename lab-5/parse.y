@@ -565,7 +565,7 @@ postfix_expression
 	}
     | IDENTIFIER '(' ')'
     {
-		$$ = new FunCall(new Identifier());
+		$$ = new FunCall(new Identifier($1));
 		$$->type = SearchSymbolTable($1,line_no);
 
 		// ignore printf
@@ -618,6 +618,7 @@ postfix_expression
 	}
 	| l_expression INC_OP
 	{
+		TYPE *temp = $1->type;
 		if($1->type->basetype == BASETYPE::INT)
 			$$ = new UnOp(UNOP_TYPE::PP_INT, $1);
 		else if($1->type->basetype == BASETYPE::FLOAT)
@@ -626,7 +627,7 @@ postfix_expression
 			cout<<"Error at line "<<line_no<<" : Incompatible expression type\n";
 			exit(0);
 		}
-		$$->type = $1->type;
+		$$->type = temp;
 	}
 	;
 

@@ -1,6 +1,7 @@
-all:    clean lex.cc parse.cc main.cc Scanner.h Scannerbase.h Scanner.ih Parser.h Parserbase.h Parser.ih
+all: clean lex.cc parse.cc main.cc Scanner.h Scannerbase.h Scanner.ih Parser.h Parserbase.h Parser.ih
 	g++  --std=c++0x lex.cc parse.cc main.cc -o compiler;
-	./compiler < test-cpp > code.asm;
+	@echo "Compiler compiled... :D"
+	./compiler < test.c > code.asm;
         
 graph:
 	dot -Tps graph1.gv -o graph1.ps

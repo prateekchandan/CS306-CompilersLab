@@ -457,6 +457,7 @@ class ArrayRef : public ExpAst {
 	}
 	ArrayRef(ArrayRef* child){
 		mem_offset = child->mem_offset;
+		is_arrayref = true;
 		indices = child->indices;
 		name = child->name;
 	}
