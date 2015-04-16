@@ -2,7 +2,8 @@
 // Some global variables/functions required for code generation /////////////
 /////////////////////////////////////////////////////////////////////////////
 
-#define INF 1000000000
+#define I 4
+#define F 4
 
 // enum for registers
 enum Reg {
@@ -314,10 +315,9 @@ void BlockAst::gen_code(){
 
 	SymbolTable *temp;
 	bool changed_scope = (currentST != symbolTable);	// Mark true if entered a new function body
-	map<int,pair<bool,int> > locals;			// map used for setting up locals on stack (if block ast is func defn.)
-	bool last_float_pushed;						// The basetype of the last local pushed onto stack is float ?
-	vector<int> counts_pushed;					// counts of consecutive ints/floats pushed onto stack as locals
-	string func_name;							// name of the function, if this is a function defn.
+	map<int,pair<bool,int> > locals;					// map used for setting up locals on stack (if block ast is func defn.)
+	int locals_size = 0;								// total size of locals (in bytes)
+	string func_name;									// name of the function, if this is a function defn.
 	
 	// If scope changed, means function definition has been encountered
 	if(changed_scope){
@@ -351,43 +351,13 @@ void BlockAst::gen_code(){
 		
 		// Create space on stack for local variables here
 		currentST->get_local_offsets(locals);
-		map<int,pair<bool,int> >::iterator it = locals.end();
-		
-		bool is_float = true;
-		int count = 0;
-		string s,dtype;
-		
-		while(1){
-			if(it==locals.end()){
-				if(locals.empty()) break;
-				it--;
-			}
-			if((it->second).first == is_float){
-				count += (it->second).second;
-			}
-			else{
-				if(count!=0){
-					// Push count of consecutive ints (or floats) placed on stack
-					counts_pushed.push_back(count);
-				}
-				is_float = (it->second).first;
-				dtype = (is_float?"f":"i");
-				count = (it->second).second;
-			}
-			
-			for(int i=0; i<(it->second).second; i++)
-				make_instr("push"+dtype,0);
-
-			if(it==locals.begin()){
-				if(count!=0){
-					// Push count of consecutive ints (or floats) placed on stack
-					counts_pushed.push_back(count);
-				}
-				last_float_pushed = is_float;
-				break;
-			}
-			it--;
+		map<int,pair<bool,int> >::iterator it = locals.begin();
+		for(; it != locals.end(); it++){
+			if((it->second).first) locals_size += F*(it->second).second;
+			else locals_size += I*(it->second).second;
 		}
+		if(locals_size != 0) make_instr("addi",-locals_size,esp);
+		
 	}
 	
 	int i, backpatch_index = -1;
@@ -395,12 +365,7 @@ void BlockAst::gen_code(){
 	statements.back()->is_last = true;
 	
 	for(i=0; i<statements.size(); i++){
-		/* backpatch the previous statement (if non-empty) with current label num
-		if(i>0 && !statements[i-1]->next_list.empty()){
-			back_patch(statements[i-1]->next_list,"l"+to_string(label_num));
-			put_label = true;
-		}
-		*/
+		
 		label_num_before = label_num;					// save label number before generating code for stmt
 		if(backpatch_index != -1) put_label = true;		// if some previous statement needs backpatching, set put_label to true
 		
@@ -432,17 +397,10 @@ void BlockAst::gen_code(){
 	}
 	
 	if(changed_scope){
-		string s;
 		put_exit_label = 1;
 		
 		// pop off local variables from the stack
-		bool is_float = last_float_pushed;
-		int c_start = counts_pushed.size()-1;
-		for(int i=c_start; i>=0; i--){
-			string dtype = is_float?"f":"i";
-			is_float = !is_float;
-			make_instr("pop"+dtype,counts_pushed[i]);
-		}
+		if(locals_size != 0) make_instr("addi",locals_size,esp);
 		
 		// Reset back ebp (if not main() function) and return 
 		if(func_name.compare("main")){

@@ -10,6 +10,7 @@
 -> nested function mein offset multiplier not changing rightly
 -> cond is constant case for for ko check karo
 -> implement is_null function for statements
+-> beware of typecasting to int of operands while doing && and ||
 
 --------------------------------------------------------------
 float gcd(int a, int b, int c, float f1, float f2, int d){
