@@ -683,7 +683,9 @@ l_expression
 			cout<<"Error at line "<<line_no<<" :"<<$1<<" Undefined\n";
 			exit(0);
 		}
-		$$->mem_offset = CurrentSymbolTable->GetEntry($1)->offset;
+		if(CurrentSymbolTable->GetEntry($1) != NULL){
+			$$->mem_offset = CurrentSymbolTable->GetEntry($1)->offset;
+		}
 	}
 	| l_expression '[' expression ']'
 	{	
@@ -706,7 +708,9 @@ l_expression
 			// We are at base case
 			$$ = new ArrayRef((Identifier*)$1);
 			((ArrayRef*)$$)->add_index($3);
-			$$->mem_offset = CurrentSymbolTable->GetEntry(name)->offset;
+			if(CurrentSymbolTable->GetEntry(name) != NULL){
+				$$->mem_offset = CurrentSymbolTable->GetEntry(name)->offset;
+			}
 		}
 		else{
 			// We are recursive step

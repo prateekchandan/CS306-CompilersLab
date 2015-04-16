@@ -2,6 +2,7 @@
 // Some global variables/functions required for code generation /////////////
 /////////////////////////////////////////////////////////////////////////////
 
+#define INF 1000000000
 #define I 4
 #define F 4
 
@@ -592,7 +593,6 @@ void For::gen_code(){
 
 void FunCallStmt::gen_code(){
 	
-	string s;
 	Reg r1 = rm.get_top();					// Top register (will have to evaluate answer in this, if FunCall)
 	vector<int> arg_types;					// for storing list of types of arguments (0=int, 1=float)
 	
@@ -662,8 +662,14 @@ void FunCallStmt::gen_code(){
 	// Return if the function is printf, as it's job is over
 	if(is_printf) return;
 	
-	// Calculate and Push the static link (TODO)
-	make_instr("pushi",0);
+	// Calculate and Push the static link
+	int level_diff = currentST->nested_level - table->nested_level + 1;		// calculating the no. of static links we have to go down
+	make_instr("move",ebp,r);
+	for(int i=0; i<level_diff; i++){
+		make_instr("addi",4,r);
+		make_instr("loadi",make_index(r),r);
+	}
+	make_instr("pushi",r);
 	
 	// Make a call to the function
 	make_instr(name->get_id());
@@ -1237,8 +1243,14 @@ void FunCall::gen_code(){
 		return;
 	}
 	
-	// Push the static link (TODO)
-	make_instr("pushi",0);
+	// Calculate and Push the static link
+	int level_diff = currentST->nested_level - table->nested_level + 1;		// calculating the no. of static links we have to go down
+	make_instr("move",ebp,r);
+	for(int i=0; i<level_diff; i++){
+		make_instr("addi",4,r);
+		make_instr("loadi",make_index(r),r);
+	}
+	make_instr("pushi",r);
 	
 	// Make a call to the function
 	make_instr(name->get_id());
