@@ -451,26 +451,28 @@ void Ass::gen_code(){
 	}
 	// lval is (arrayref) or (identifier in another activation record)
 	else if(left->is_arrayref || (left->is_identifier && left->mem_offset == INF)){	
-		if(left->is_identifier) ((Identifier*)left)->gen_code_addr();
-		else ((ArrayRef*)left)->gen_code_addr();
-		
+		// If right side is constant, use immediate operation
 		if(right->is_const){
-			// If right side is constant, use immediate operation
+			// Evaluate the address of lval
+			if(left->is_identifier) ((Identifier*)left)->gen_code_addr();
+			else ((ArrayRef*)left)->gen_code_addr();
 			if(!dtype.compare("i"))
 				make_instr("storei", right->vali, make_index(r));
 			else
 				make_instr("storef", right->valf, make_index(r));
 		}
+		// Else rhs has to be evaluated first & then lval's address
 		else{
-			// Else rhs has to be evaluated
-			make_instr("pushi",r);					// push lval's address onto the stack
-			right->gen_code();						// gen code for rhs
-			rm.pop_top();							// pop(r)
-			Reg l = rm.get_top();					// l = current top register
-			rm.push_top(r);							// push back(r)
-			make_instr("loadi",make_index(esp),l);	// load back the lval's address in l
-			make_instr("popi",1);					// pop from stack
-			make_instr("store"+dtype, r, make_index(l));	// store rhs in l
+			right->gen_code();												// gen code for rhs
+			make_instr("pushi",r);											// push the value evaluated onto the stack
+			rm.pop_top();													// pop(r)
+			Reg l = rm.get_top();											// l = current top register
+			rm.push_top(r);													// push back(r)
+			if(left->is_identifier) ((Identifier*)left)->gen_code_addr();	// calculate the address of lval in 'r' now
+			else ((ArrayRef*)left)->gen_code_addr();
+			make_instr("loadi",make_index(esp),l);							// load back the rhs value into l
+			make_instr("popi",1);											// pop from stack
+			make_instr("store"+dtype, l, make_index(r));					// store rhs in address given by r
 		}
 	}
 	else assert(0);
@@ -802,13 +804,12 @@ void Op::gen_code(){
 				make_instr("store"+dtype, r, make_index(ebp,left->mem_offset));
 			}
 		}
-		 // lval is (arrayref) or (identifier located in another activation record)
+		// lval is (arrayref) or (identifier located in another activation record)
 		else if(left->is_arrayref || (left->is_identifier && left->mem_offset == INF)){
-			if(left->is_identifier) ((Identifier*)left)->gen_code_addr();
-			else ((ArrayRef*)left)->gen_code_addr();
-			
+			// If right side is constant, use immediate operation (also put that value in top register for return of this node)
 			if(right->is_const){
-				// If right side is constant, use immediate operation (also put that value in top register for return of this node)
+				if(left->is_identifier) ((Identifier*)left)->gen_code_addr();
+				else ((ArrayRef*)left)->gen_code_addr();
 				if(is_int){
 					make_instr("storei", right->vali, make_index(r));
 					make_instr("move", right->vali, r);
@@ -818,16 +819,19 @@ void Op::gen_code(){
 					make_instr("move", right->valf, r);
 				}
 			}
+			// Else rhs has to be evaluated first & then lval's address	
 			else{
-				// Else push the address of lval onto stack
-				make_instr("pushi",r);									// push the lval's address onto the stack
-				right->gen_code();										// generate code for the rhs
-				rm.pop_top();											// pop register r (contains mem. pointer)
-				Reg l = rm.get_top();									// get top register l
-				rm.push_top(r);											// place back r on top
-				make_instr("loadi",make_index(esp),l);					// get back the lval's address from stack into register l
-				make_instr("popi",1);									// pop from the stack
-				make_instr("store"+dtype, r, make_index(l));			// store back the rhs into lval's location
+				right->gen_code();												// gen code for rhs
+				make_instr("pushi",r);											// push the value evaluated onto the stack
+				rm.pop_top();													// pop(r)
+				Reg l = rm.get_top();											// l = current top register
+				rm.push_top(r);													// push back(r)
+				if(left->is_identifier) ((Identifier*)left)->gen_code_addr();	// calculate the address of lval in 'r' now
+				else ((ArrayRef*)left)->gen_code_addr();
+				make_instr("loadi",make_index(esp),l);							// load back the rhs value into l
+				make_instr("popi",1);											// pop from stack
+				make_instr("store"+dtype, l, make_index(r));					// store rhs in address given by r
+				make_instr("move",l,r);											// put the value evaluated in r
 			}
 		}
 		else assert(0);
