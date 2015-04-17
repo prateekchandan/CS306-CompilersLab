@@ -141,6 +141,10 @@ bool put_exit_label = 0;						// Boolean to indicate whether the instruction to 
 
 SymbolTable *currentST = NULL;					// The current symbol table under consideration (used for variable lookup)
 
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Helper Functions ////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+
 // For printing the code for functions as they are parsed //
 void print_code(){
 	int i;
@@ -149,10 +153,6 @@ void print_code(){
 	}
 	code->clear();
 }
-
-/////////////////////////////////////////////////////////////////////////////
-/////////////////////////// Helper Functions ////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////
 
 // Function to get a string of space characters
 string get_space(int c){
@@ -434,9 +434,10 @@ void Ass::gen_code(){
 	string s;
 	Reg r = rm.get_top();
 	
-	if(left->is_identifier){
+	// lval is an identifier present in the current activation record
+	if(left->is_identifier && left->mem_offset != INF){	
 		if(right->is_const){
-			// If right side is constant, use immediate operation (also put that value in top register for return of this node)
+			// If right side is constant, use immediate operation
 			if(!dtype.compare("i"))
 				make_instr("storei", right->vali, make_index(ebp,left->mem_offset));
 			else
@@ -448,25 +449,28 @@ void Ass::gen_code(){
 			make_instr("store"+dtype, r, make_index(ebp,left->mem_offset));
 		}
 	}
-	else if(left->is_arrayref){
-		((ArrayRef*)left)->gen_code_addr();
+	// lval is (arrayref) or (identifier in another activation record)
+	else if(left->is_arrayref || (left->is_identifier && left->mem_offset == INF)){	
+		if(left->is_identifier) ((Identifier*)left)->gen_code_addr();
+		else ((ArrayRef*)left)->gen_code_addr();
+		
 		if(right->is_const){
-			// If right side is constant, use immediate operation (also put that value in top register for return of this node)
+			// If right side is constant, use immediate operation
 			if(!dtype.compare("i"))
-				make_instr("storei",right->vali, make_index(r));
+				make_instr("storei", right->vali, make_index(r));
 			else
-				make_instr("storef",right->valf, make_index(r));
+				make_instr("storef", right->valf, make_index(r));
 		}
 		else{
-			// Else save the lval index onto the stack & evaluate right side
-			make_instr("push"+dtype,r); 						// save the index
-			right->gen_code();									// generate code for rhs
-			rm.pop_top();										// pop the top register r
-			Reg l = rm.get_top();								// get the current top register
-			rm.push_top(r);										// put back the register r on top
-			make_instr("load"+dtype, make_index(esp), l); 		// load the saved index in current top register l
-			make_instr("pop"+dtype, 1);							// pop the saved value from stack
-			make_instr("store"+dtype, r, make_index(l)); 		// store the calculated rhs value in lhs's index
+			// Else rhs has to be evaluated
+			make_instr("pushi",r);					// push lval's address onto the stack
+			right->gen_code();						// gen code for rhs
+			rm.pop_top();							// pop(r)
+			Reg l = rm.get_top();					// l = current top register
+			rm.push_top(r);							// push back(r)
+			make_instr("loadi",make_index(esp),l);	// load back the lval's address in l
+			make_instr("popi",1);					// pop from stack
+			make_instr("store"+dtype, r, make_index(l));	// store rhs in l
 		}
 	}
 	else assert(0);
@@ -598,13 +602,20 @@ void FunCallStmt::gen_code(){
 	
 	assert(name->get_id().compare("main"));					// check that main is not called by any function
 	bool is_printf = (!name->get_id().compare("printf")); 	// Check if function is printf
+	bool is_non_void;
+	string dtype_ret;
+	if(!is_printf){
+		is_non_void = (table->returnType->basetype != BASETYPE::VOID);
+		dtype_ret = (table->returnType->basetype == BASETYPE::INT)?"i":"f";
+	}
 	
 	// Save the registers which are in use (if function is not printf)
 	bool in_use[4] = {1,1,1,1};							// for finding which registers are in use among [edx,ecx,ebx,eax]
 	bool is_int[4];										// for storing the current types of the registers
 	if(!is_printf) rm.save_registers(in_use,is_int);
 	
-	// Note: No need to push space for return value if FunCallStmt //
+	// Push space for return value (if not printf), as even though nothing its a funCallStmt, the value in that location may be modified
+	if(!is_printf && is_non_void) make_instr("push"+dtype_ret,0);
 	
 	// Evaluate arguments from right to left and push onto the stack
 	Reg r = rm.get_top();					// current top register (after register saving)
@@ -691,6 +702,9 @@ void FunCallStmt::gen_code(){
 		}
 	}
 	if(count!=0) make_instr("pop"+dtype,count);
+	
+	// Pop space for return value, if it was created
+	if(is_non_void) make_instr("pop"+dtype_ret,1);
 
 	// Load the registers which were saved
 	rm.load_registers(in_use, is_int);
@@ -706,9 +720,27 @@ void Identifier::gen_code(){
 	Reg r = rm.get_top();							// Get the top-most free register
 	bool is_int = (type->basetype == BASETYPE::INT);
 	
-	if(is_int) make_instr("loadi",make_index(ebp,mem_offset),r);
-	else if(type->basetype == BASETYPE::FLOAT) make_instr("loadf",make_index(ebp,mem_offset),r);
-	else assert(0);
+	// If identifier is present in the same activation record
+	if(mem_offset != INF){
+		if(is_int) make_instr("loadi",make_index(ebp,mem_offset),r);
+		else make_instr("loadf",make_index(ebp,mem_offset),r);
+	}
+	// Else, it is defined somewhere down the static activation record chain
+	else{
+		SymbolTable *curr = currentST;
+		make_instr("move",ebp,r);
+		// Reach out for the ebp of the activation record containing the identifier
+		while(1){
+			assert(curr->get_name().compare("Global"));
+			if(curr == defined_at) break;
+			make_instr("addi",4,r);
+			make_instr("loadi",make_index(r),r);
+			curr = curr->parent;
+		}
+		mem_offset = curr->GetEntry(id)->offset;
+		if(is_int) make_instr("loadi",make_index(r,mem_offset),r);
+		else make_instr("loadf",make_index(r,mem_offset),r);
+	}
 	
 	// If node is a conditional, then add control flow instructions
 	if(is_cond){
@@ -716,6 +748,29 @@ void Identifier::gen_code(){
 		if(fall) false_list.push_back(add_line_to_code("je"));
 		else true_list.push_back(add_line_to_code("jne"));
 	}
+	reg_addr = r;
+	return;
+}
+
+// Generate the address of an identifier not in the current activation record
+void Identifier::gen_code_addr(){
+	assert(type->child == NULL);					// Check that it is not an array type
+	Reg r = rm.get_top();							// Get the top-most free register
+	bool is_int = (type->basetype == BASETYPE::INT);
+
+	SymbolTable *curr = currentST;
+	make_instr("move",ebp,r);
+	// Reach out for the ebp of the activation record containing the identifier
+	while(1){
+		assert(curr->get_name().compare("Global"));
+		if(curr == defined_at) break;
+		make_instr("addi",4,r);
+		make_instr("loadi",make_index(r),r);
+		curr = curr->parent;
+	}
+	mem_offset = curr->GetEntry(id)->offset;
+	make_instr("addi",mem_offset,r);
+
 	reg_addr = r;
 	return;
 }
@@ -728,7 +783,8 @@ void Op::gen_code(){
 	Reg r = rm.get_top();
 	
 	if(op_type==ASSIGN_INT || op_type==ASSIGN_FLOAT){
-		if(left->is_identifier){
+		// lval is present in the same activation record and is an identifier
+		if(left->is_identifier && left->mem_offset != INF){
 			if(right->is_const){
 				// If right side is constant, use immediate operation (also put that value in top register for return of this node)
 				if(is_int){
@@ -746,30 +802,32 @@ void Op::gen_code(){
 				make_instr("store"+dtype, r, make_index(ebp,left->mem_offset));
 			}
 		}
-		else if(left->is_arrayref){
-			((ArrayRef*)left)->gen_code_addr();
+		 // lval is (arrayref) or (identifier located in another activation record)
+		else if(left->is_arrayref || (left->is_identifier && left->mem_offset == INF)){
+			if(left->is_identifier) ((Identifier*)left)->gen_code_addr();
+			else ((ArrayRef*)left)->gen_code_addr();
+			
 			if(right->is_const){
 				// If right side is constant, use immediate operation (also put that value in top register for return of this node)
 				if(is_int){
-					make_instr("storei",right->vali, make_index(r));
+					make_instr("storei", right->vali, make_index(r));
 					make_instr("move", right->vali, r);
 				}
 				else{
-					make_instr("storef",right->valf, make_index(r));
+					make_instr("storef", right->valf, make_index(r));
 					make_instr("move", right->valf, r);
 				}
 			}
 			else{
-				// Else save the lval index onto the stack & evaluate right side
-				make_instr("push"+dtype,r); 						// save the index
-				right->gen_code();									// generate code for rhs
-				rm.pop_top();										// pop the top register r
-				
-				Reg l = rm.get_top();								// get the current top register
-				rm.push_top(r);										// put back the register r on top
-				make_instr("load"+dtype, make_index(esp), l); 		// load the saved index in current top register l
-				make_instr("pop"+dtype, 1);							// pop the saved value from stack
-				make_instr("store"+dtype, r, make_index(l)); 		// store the calculated rhs value in lhs's index
+				// Else push the address of lval onto stack
+				make_instr("pushi",r);									// push the lval's address onto the stack
+				right->gen_code();										// generate code for the rhs
+				rm.pop_top();											// pop register r (contains mem. pointer)
+				Reg l = rm.get_top();									// get top register l
+				rm.push_top(r);											// place back r on top
+				make_instr("loadi",make_index(esp),l);					// get back the lval's address from stack into register l
+				make_instr("popi",1);									// pop from the stack
+				make_instr("store"+dtype, r, make_index(l));			// store back the rhs into lval's location
 			}
 		}
 		else assert(0);
@@ -1098,32 +1156,32 @@ void UnOp::gen_code(){
 		else make_instr("intTofloat",r);
 	}
 	else if(op_type==PP_INT || op_type==PP_FLOAT){
-		exp->gen_code();
 		
-		// If lhs is identifier, then r contains its value in it
-		if(exp->is_identifier){
+		// lval is identifier located in the same activation record
+		if(exp->is_identifier && exp->mem_offset != INF){		// identifier is defined in the current activation record
+			exp->gen_code();
 			if(is_int) make_instr("addi",1,r);									// increment value of r by 1
 			else make_instr("addf",1.0f,r);
-			
 			make_instr("store"+dtype, r, make_index(ebp,exp->mem_offset));		// store incremented value back in lval
-			if(is_int) make_instr("addi",-1,r);									// put decremented (i.e. old) value in r
-			else make_instr("addf",-1.0f,r);
 		}
-		// But if lhs is arrayref, then r now contains its memory address (viz. pointer)
-		else if(exp->is_arrayref){
+		 // lval is (arrayref) or (identifier located in another activation record)
+		else if(exp->is_arrayref || (exp->is_identifier && exp->mem_offset == INF)){
+			if(exp->is_identifier) ((Identifier*)exp)->gen_code_addr();
+			else ((ArrayRef*)exp)->gen_code_addr();
+			
 			rm.pop_top();											// pop register r (contains mem. pointer)
 			Reg l = rm.get_top();									// get top register l
 			rm.push_top(r);											// place back r on top
 			make_instr("load"+dtype, make_index(r), l);				// l <- *(r)
-			if(is_int) make_instr("addi",1,r);						// l <- l + 1 (increment value by 1)
-			else make_instr("addf",1.0f,r);
+			if(is_int) make_instr("addi",1,l);						// l <- l + 1 (increment value by 1)
+			else make_instr("addf",1.0f,l);
 			make_instr("store"+dtype,l, make_index(r));				// *(r) <- l
 			make_instr("move",l,r);									// r <- l (preparing value in r for return from this node)
-			
-			if(is_int) make_instr("addi",-1,r);						// r <- r - 1 (decrement value by 1 and get old value for return)
-			else make_instr("addf",-1.0f,r);
 		}
 		else assert(0);
+		
+		if(is_int) make_instr("addi",-1,r);						// put decremented (i.e. old) value in r
+		else make_instr("addf",-1.0f,r);
 	}
 	else{											//This is the case of op_type==NOT
 		if(is_cond){
@@ -1379,9 +1437,33 @@ void ArrayRef::gen_code_addr(){
 		}
 	}
 	
-	make_instr("muli",-1,r);			// Negate r, as the index grows towards lower addresses of stack
-	make_instr("addi",mem_offset,r);	// Add mem_offset of array-base wrt ebp
-	make_instr("addi",ebp,r);			// Get absolute address by r <- ebp + r
+	make_instr("muli",-1,r);				// Negate r, as the index grows towards lower addresses of stack
+	
+	// If the array is in the current activation record, evaluate its address
+	if(mem_offset != INF){
+		make_instr("addi",mem_offset,r);	// Add mem_offset of array-base wrt ebp
+		make_instr("addi",ebp,r);			// Get absolute address by r <- ebp + r
+	}
+	// Else, it is present somewhere down the static activation record chain
+	else{
+		rm.pop_top();												// pop(r)
+		Reg l = rm.get_top();										// l = get new top register
+		rm.push_top(r);												// push(r)
+		
+		SymbolTable *curr = currentST;
+		make_instr("move",ebp,l);
+		// Reach out for the ebp of the activation record containing the identifier
+		while(1){
+			assert(curr->get_name().compare("Global"));
+			if(curr == defined_at) break;
+			make_instr("addi",4,l);
+			make_instr("loadi",make_index(l),l);
+			curr = curr->parent;
+		}
+		mem_offset = curr->GetEntry(name->get_id())->offset;
+		make_instr("addi",mem_offset,l);	// Add mem_offset of array-base wrt the ebp of the activation record found (in l)
+		make_instr("addi",l,r);				// Get absolute address by r <- l + r
+	}
 	
 	reg_addr = r;
 	return;

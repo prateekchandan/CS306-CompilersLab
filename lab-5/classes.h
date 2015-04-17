@@ -129,6 +129,7 @@ class Identifier : public ExpAst {
 	string get_id();
 	void print();
 	void gen_code();
+	void gen_code_addr();
 };
 
 /////////////////////////////////////////////////////////////////////////////

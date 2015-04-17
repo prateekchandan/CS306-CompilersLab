@@ -18,7 +18,7 @@
 %%
 
 translation_unit
-	: 
+	:
 	function_definition 
 	{
 		$$ = $1 ;
@@ -31,7 +31,7 @@ translation_unit
 			((BlockAst*)$1)->get_symbol_table()->print();
 			cout<<"-----------------------\n";
 		}
-		
+
 		$1->gen_code();
 		
 		// Restoring Environment
