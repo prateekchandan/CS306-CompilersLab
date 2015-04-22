@@ -7,6 +7,7 @@ compiler: lex.cc parse.cc main.cc Scanner.h Scannerbase.h Scanner.ih Parser.h Pa
 exe: clean3 machine.cc
 	@./compiler < ../test.c > code.asm;
 	@g++ -std=c++11 -g3 -m32 -Wno-write-strings -O0 machine.cc;
+	@g++ -std=c++11 -g3 -m32 -Wno-write-strings -O0 machine_stats.cc -o b.out;
 	@echo "Compiler compiled the code :D"
 	
 lex.cc: lex.l Scanner.ih 

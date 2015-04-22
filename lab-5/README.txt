@@ -7,7 +7,8 @@ Prateek Chandan (120050042)
 
 Instructions to run:
 1) Write the code you want to compile in test.c (in the project root directory)
-2) Run the following command: ./gen.sh
+2) Run the following command: ./gen.sh [-s] 
+(-s is an optional flag for creating an executable which displays statistics of the code along with output)
 [
 After doing the above note that:
 Inside the project root directory:
@@ -15,5 +16,6 @@ Inside the project root directory:
 - The executable for code.asm would be produced with the name a.out
 ]
 3) If you want to clean up just code.asm and a.out, run: ./gen.sh clean
-4) If you want to clean up all the project executables (i.e. compiler exe, bison and lex produced code) and reset to default, then run: ./gen.sh reset
+4) If you want to clean up all the project executables (i.e. compiler exe, bison and lex produced code) 
+and reset to default, then run: ./gen.sh reset
 

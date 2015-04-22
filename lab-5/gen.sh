@@ -16,6 +16,12 @@ else
 	fi
 	make exe
 	mv code.asm ..
-	mv a.out ..
+	if [[ $1 = "-s" ]]; then
+		rm -rf a.out
+		mv b.out ../a.out
+	else
+		rm -rf b.out
+		mv a.out ..
+	fi
 	cd ..
 fi
