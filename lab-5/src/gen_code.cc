@@ -999,7 +999,7 @@ void Op::gen_code(){
 					int line = add_line_to_code("je");
 					right->gen_code();
 					make_instr("cmpi",0,r);
-					add_line_to_code("je("+to_string(label_num)+");");
+					add_line_to_code("je(l"+to_string(label_num)+");");
 					back_patch(line,"l"+to_string(label_num));
 					make_instr("move",1,r);
 					put_label = true;

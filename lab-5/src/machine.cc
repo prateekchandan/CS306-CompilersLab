@@ -1,5 +1,5 @@
 #include<iostream>
-#define STACK_SIZE 1000
+#define STACK_SIZE 10000
 
 #define j(l) goto l
 #define je(l) if(_flag==0) goto l
