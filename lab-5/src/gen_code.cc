@@ -1167,6 +1167,7 @@ void UnOp::gen_code(){
 		else make_instr("addf",-1.0f,r);
 	}
 	else{											//This is the case of op_type==NOT
+		assert(!exp->is_const);
 		if(is_cond){
 			exp->is_cond = true;
 			exp->fall = !fall;
@@ -1194,7 +1195,7 @@ void UnOp::gen_code(){
 		reg_addr = r;
 		return;
 	}
-	
+
 	// If node is a conditional, then add control flow instructions
 	if(is_cond){
 		is_int ? make_instr("cmpi",0,r) : make_instr("cmpf",0.0f,r);
@@ -1228,7 +1229,7 @@ void FunCall::gen_code(){
 	Reg r = rm.get_top();					// current top register (after register saving)
 	int init_val = (is_printf ? 0 : expression_list.size()-1);
 	int int_args_count=0, float_args_count=0;
-	
+
 	for(int i=init_val;;){
 		if(is_printf && i>=expression_list.size()) break;
 		if(!is_printf && i==-1) break;

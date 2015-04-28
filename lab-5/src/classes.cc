@@ -148,13 +148,13 @@ void UnOp::set_expression(ExpAst *e){
 		if(op_type==UNOP_TYPE::TO_INT) vali = e->valf;
 		if(op_type==UNOP_TYPE::TO_FLOAT) valf = e->vali;
 		if(op_type==UNOP_TYPE::NOT){
-			if(type->basetype==BASETYPE::INT){
+			if(e->type->basetype==BASETYPE::INT){
 				if(e->vali != 0) vali = 0;
 				else vali = 1;
 			}
-			if(type->basetype==BASETYPE::FLOAT){
-				if(e->valf != 0) valf = 1;
-				else valf = 0;
+			if(e->type->basetype==BASETYPE::FLOAT){
+				if(e->valf != 0) valf = 0.0;
+				else valf = 1.0;
 			}
 		}
 	}

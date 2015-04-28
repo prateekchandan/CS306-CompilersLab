@@ -343,14 +343,14 @@ class UnOp : public ExpAst {
 			if(o==UMINUS_FLOAT) valf = -e->valf;
 			if(o==TO_INT) vali = e->valf;
 			if(o==TO_FLOAT) valf = e->vali;
-			if(op_type==NOT){
-				if(type->basetype==BASETYPE::INT){
+			if(o==NOT){
+				if(e->type->basetype==BASETYPE::INT){
 					if(e->vali != 0) vali = 0;
 					else vali = 1;
 				}
-				if(type->basetype==BASETYPE::FLOAT){
-					if(e->valf != 0.0) valf = 1.0;
-					else valf = 0.0;
+				if(e->type->basetype==BASETYPE::FLOAT){
+					if(e->valf != 0.0) valf = 0.0;
+					else valf = 1.0;
 				}
 			}
 		}
