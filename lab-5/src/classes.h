@@ -276,8 +276,16 @@ class Op : public ExpAst {
 		right = r;
 		if(l->is_const && r->is_const){
 			is_const = true;
-			if(o==AND_OP) vali = (l->vali!=0 && r->vali!=0);
-			if(o==OR_OP) vali = (l->vali!=0 || r->vali!=0);					
+			if(o==AND_OP){
+				bool l_zero = (left->type->basetype==INT) ? (l->vali==0) : (l->valf==0);
+				bool r_zero = (right->type->basetype==INT) ? (r->vali==0) : (r->valf==0);
+				vali = (l_zero || r_zero) ? 0 : 1;
+			}
+			if(o==OR_OP){
+				bool l_zero = (left->type->basetype==INT) ? (l->vali==0) : (l->valf==0);
+				bool r_zero = (right->type->basetype==INT) ? (r->vali==0) : (r->valf==0);
+				vali = (l_zero && r_zero) ? 0 : 1;
+			}
 			if(o==PLUS_INT) vali = l->vali + r->vali;
 			if(o==PLUS_FLOAT) valf = l->valf + r->valf;
 			if(o==MINUS_INT) vali = l->vali - r->vali;
@@ -300,14 +308,16 @@ class Op : public ExpAst {
 			if(o==GE_OP_FLOAT) vali = (l->valf >= r->valf);
 		}
 		else if(l->is_const || r->is_const){
-			if(o==OR_OP) is_const = (l->is_const) ? (l->vali!=0) : (r->vali!=0);
-			if(o==AND_OP) is_const = (l->is_const) ? (l->vali==0) : (r->vali==0.0);
+			int l_nonzero = (left->type->basetype==INT) ? (l->vali!=0) : (l->valf!=0);
+			int r_nonzero = (right->type->basetype==INT) ? (r->vali!=0) : (r->valf!=0);
+			if(o==OR_OP) is_const = (l->is_const) ? l_nonzero : r_nonzero;
+			if(o==AND_OP) is_const = (l->is_const) ? !l_nonzero : !r_nonzero;
 		}
 		return;
 	}
 	
 	void print();
-	void gen_code();	
+	void gen_code();
 };
 
 class UnOp : public ExpAst {

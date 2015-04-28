@@ -332,12 +332,6 @@ expression
 			exit(0);
 		}
 
-		if($1->type->basetype == BASETYPE::FLOAT && $1->type->child == NULL)
-			$1 = new UnOp(UNOP_TYPE::TO_INT, $1);
-
-		if($3->type->basetype == BASETYPE::FLOAT && $3->type->child == NULL)
-			$3 = new UnOp(UNOP_TYPE::TO_INT, $3);
-
 		$$ = new Op(OP_TYPE::OR_OP, $1, $3);
 		$$->type = new TYPE(BASETYPE::INT);
 	}
@@ -359,12 +353,6 @@ logical_and_expression
 			cout<<"Error at line "<<line_no<<" : Unable to typecast String or Void\n";
 			exit(0);
 		}
-
-		if($1->type->basetype == BASETYPE::FLOAT && $1->type->child == NULL)
-			$1 = new UnOp(UNOP_TYPE::TO_INT, $1);
-
-		if($3->type->basetype == BASETYPE::FLOAT && $3->type->child == NULL)
-			$3 = new UnOp(UNOP_TYPE::TO_INT, $3);
 
 		$$ = new Op(OP_TYPE::AND_OP, $1, $3);
 		$$->type = new TYPE(BASETYPE::INT);

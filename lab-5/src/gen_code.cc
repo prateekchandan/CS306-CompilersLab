@@ -600,7 +600,6 @@ void For::gen_code(){
 void FunCallStmt::gen_code(){
 	
 	Reg r1 = rm.get_top();					// Top register (will have to evaluate answer in this, if FunCall)
-	vector<int> arg_types;					// for storing list of types of arguments (0=int, 1=float)
 	
 	assert(name->get_id().compare("main"));					// check that main is not called by any function
 	bool is_printf = (!name->get_id().compare("printf")); 	// Check if function is printf
@@ -620,8 +619,9 @@ void FunCallStmt::gen_code(){
 	if(!is_printf && is_non_void) make_instr("push"+dtype_ret,0);
 	
 	// Evaluate arguments from right to left and push onto the stack
-	Reg r = rm.get_top();					// current top register (after register saving)
+	Reg r = rm.get_top();						// current top register (after register saving)
 	int init_val = (is_printf ? 0 : expression_list.size()-1);
+	int int_args_count=0, float_args_count=0; 	// Count of integer and float arguments
 	
 	for(int i=init_val;;){
 		if(is_printf && i>=expression_list.size()) break;
@@ -630,6 +630,10 @@ void FunCallStmt::gen_code(){
 		bool is_int = (expression_list[i]->type->basetype == BASETYPE::INT);
 		bool is_string = (expression_list[i]->type->basetype == BASETYPE::STRING);
 		
+		// Increment the value of count of int/float arguments based on the arg's type
+		if(is_int) int_args_count++;
+		else float_args_count++;
+		
 		if(expression_list[i]->is_const){
 			if(is_string){
 				assert(is_printf);
@@ -637,34 +641,22 @@ void FunCallStmt::gen_code(){
 			}
 			else if(is_int){
 				if(is_printf) make_instr("print_int",expression_list[i]->vali);
-				else{
-					make_instr("pushi",expression_list[i]->vali);
-					arg_types.push_back(0);
-				}
+				else make_instr("pushi",expression_list[i]->vali);
 			}
 			else{
 				if(is_printf) make_instr("print_float",expression_list[i]->valf);
-				else{
-					make_instr("pushf",expression_list[i]->valf);
-					arg_types.push_back(1);
-				}
+				else make_instr("pushf",expression_list[i]->valf);
 			}
 		}
 		else{
 			expression_list[i]->gen_code();
 			if(is_int){
 				if(is_printf) make_instr("print_int",r);
-				else{
-					make_instr("pushi",r);
-					arg_types.push_back(0);
-				}
+				else make_instr("pushi",r);
 			}
 			else{
 				if(is_printf) make_instr("print_float",r);
-				else{
-					make_instr("pushf",r);
-					arg_types.push_back(1);
-				}
+				else make_instr("pushf",r);
 			}
 		}
 		
@@ -678,32 +670,15 @@ void FunCallStmt::gen_code(){
 	// Calculate and Push the static link
 	int level_diff = currentST->nested_level - table->nested_level + 1;		// calculating the no. of static links we have to go down
 	make_instr("move",ebp,r);
-	for(int i=0; i<level_diff; i++){
-		make_instr("addi",4,r);
-		make_instr("loadi",make_index(r),r);
-	}
+	for(int i=0; i<level_diff; i++) make_instr("loadi",make_index(r,4),r);
 	make_instr("pushi",r);
 	
 	// Make a call to the function
 	make_instr(name->get_id());
 	
-	// Pop static link & parameters from the stack (initial count=1 is for popping the static link)
-	int mode = 0;								// 0 means int, 1 means float;
-	string dtype = (mode?"f":"i");
-	int count = 1;								// Count of consecutive parameters on the stack of same mode
-	for(int i=arg_types.size()-1; i>=0; i--){
-		
-		if(arg_types[i]==mode) count++;
-		else{
-			if(count!=0){
-				make_instr("pop"+dtype,count);
-			}
-			mode = arg_types[i];
-			dtype = (mode?"f":"i");
-			count = 1;
-		}
-	}
-	if(count!=0) make_instr("pop"+dtype,count);
+	// Pop static link & parameters from the stack
+	int size_to_be_popped = 4 + I*int_args_count + F*float_args_count;
+	make_instr("addi", size_to_be_popped, esp);
 	
 	// Pop space for return value, if it was created
 	if(is_non_void) make_instr("pop"+dtype_ret,1);
@@ -735,8 +710,7 @@ void Identifier::gen_code(){
 		while(1){
 			assert(curr->get_name().compare("Global"));
 			if(curr == defined_at) break;
-			make_instr("addi",4,r);
-			make_instr("loadi",make_index(r),r);
+			make_instr("loadi",make_index(r,4),r);
 			curr = curr->parent;
 		}
 		mem_offset = curr->GetEntry(id)->offset;
@@ -766,8 +740,7 @@ void Identifier::gen_code_addr(){
 	while(1){
 		assert(curr->get_name().compare("Global"));
 		if(curr == defined_at) break;
-		make_instr("addi",4,r);
-		make_instr("loadi",make_index(r),r);
+		make_instr("loadi",make_index(r,4),r);
 		curr = curr->parent;
 	}
 	mem_offset = curr->GetEntry(id)->offset;
@@ -985,20 +958,26 @@ void Op::gen_code(){
 			string dtype2 = (right->type->basetype==BASETYPE::INT) ? "i" : "f";
 			
 			if(l_const || r_const){
-				if(l_const) right->gen_code();
-				else left->gen_code();
-				make_instr("cmpi",0,r);
+				if(l_const){
+					right->gen_code();
+					make_instr("cmp"+dtype2,0,r);
+				}
+				else{
+					left->gen_code();
+					make_instr("cmp"+dtype1,0,r);
+				}
+				
 				add_line_to_code("je(l"+to_string(label_num)+");");
 				make_instr("move",1,r);
 				put_label = true;
 			}
 			else{
 				left->gen_code();
-				make_instr("cmpi",0,r);
+				make_instr("cmp"+dtype1,0,r);
 				if(is_and){
 					int line = add_line_to_code("je");
 					right->gen_code();
-					make_instr("cmpi",0,r);
+					make_instr("cmp"+dtype2,0,r);
 					add_line_to_code("je(l"+to_string(label_num)+");");
 					back_patch(line,"l"+to_string(label_num));
 					make_instr("move",1,r);
@@ -1007,7 +986,7 @@ void Op::gen_code(){
 				else{
 					int line = add_line_to_code("jne");
 					right->gen_code();
-					make_instr("cmpi",0,r);
+					make_instr("cmp"+dtype2,0,r);
 					add_line_to_code("jne(l"+to_string(label_num)+");");
 					add_line_to_code("j("+to_string(label_num+1)+");");
 					put_label = true;
@@ -1229,7 +1208,6 @@ void UnOp::gen_code(){
 void FunCall::gen_code(){
 	
 	Reg r1 = rm.get_top();									// Top register ( will have to evaluate asnwer in this)
-	vector<int> arg_types;									// for storing list of types of arguments
 	
 	int ret_type = type->basetype;							// return type of this function expression
 	assert(ret_type!=BASETYPE::VOID);
@@ -1249,6 +1227,7 @@ void FunCall::gen_code(){
 	// Evaluate arguments from right to left and push onto the stack
 	Reg r = rm.get_top();					// current top register (after register saving)
 	int init_val = (is_printf ? 0 : expression_list.size()-1);
+	int int_args_count=0, float_args_count=0;
 	
 	for(int i=init_val;;){
 		if(is_printf && i>=expression_list.size()) break;
@@ -1257,6 +1236,10 @@ void FunCall::gen_code(){
 		bool is_int = (expression_list[i]->type->basetype == BASETYPE::INT);
 		bool is_string = (expression_list[i]->type->basetype == BASETYPE::STRING);
 		
+		// Increment the no. of int arguments or float arguments (used for popping off from stack later on)
+		if(is_int) int_args_count++;
+		else float_args_count++;
+		
 		if(expression_list[i]->is_const){
 			if(is_string){
 				assert(is_printf);
@@ -1264,34 +1247,22 @@ void FunCall::gen_code(){
 			}
 			else if(is_int){
 				if(is_printf) make_instr("print_int",expression_list[i]->vali);
-				else{
-					make_instr("pushi",expression_list[i]->vali);
-					arg_types.push_back(0);
-				}
+				else make_instr("pushi",expression_list[i]->vali);
 			}
 			else{
 				if(is_printf) make_instr("print_float",expression_list[i]->valf);
-				else{
-					make_instr("pushf",expression_list[i]->valf);
-					arg_types.push_back(1);
-				}
+				else make_instr("pushf",expression_list[i]->valf);
 			}
 		}
 		else{
 			expression_list[i]->gen_code();
 			if(is_int){
 				if(is_printf) make_instr("print_int",r);
-				else{
-					make_instr("pushi",r);
-					arg_types.push_back(0);
-				}
+				else make_instr("pushi",r);
 			}
 			else{
 				if(is_printf) make_instr("print_float",r);
-				else{
-					make_instr("pushf",r);
-					arg_types.push_back(1);
-				}
+				else make_instr("pushf",r);
 			}
 		}
 		
@@ -1308,30 +1279,15 @@ void FunCall::gen_code(){
 	// Calculate and Push the static link
 	int level_diff = currentST->nested_level - table->nested_level + 1;		// calculating the no. of static links we have to go down
 	make_instr("move",ebp,r);
-	for(int i=0; i<level_diff; i++){
-		make_instr("addi",4,r);
-		make_instr("loadi",make_index(r),r);
-	}
+	for(int i=0; i<level_diff; i++) make_instr("loadi",make_index(r,4),r);
 	make_instr("pushi",r);
 	
 	// Make a call to the function
 	make_instr(name->get_id());
 	
 	// Pop static link & parameters from the stack (initial count=1 is for popping the static link)
-	int mode = 0;								// 0 means int, 1 means float;
-	string dtype1 = (mode?"f":"i");
-	int count = 1;								// Count of consecutive parameters on the stack of same mode
-	for(int i=arg_types.size()-1; i>=0; i--){
-		
-		if(arg_types[i]==mode) count++;
-		else{
-			if(count!=0) make_instr("pop"+dtype1,count);
-			mode = arg_types[i];
-			dtype1 = (mode?"f":"i");
-			count = 1;
-		}
-	}
-	if(count!=0) make_instr("pop"+dtype1,count);
+	int size_to_be_popped = 4 + I*int_args_count + F*float_args_count;
+	make_instr("addi", size_to_be_popped, esp);
 	
 	// Pick up the return value from stack and pop it off
 	make_instr("load"+dtype,make_index(esp),r1);
@@ -1460,8 +1416,7 @@ void ArrayRef::gen_code_addr(){
 		while(1){
 			assert(curr->get_name().compare("Global"));
 			if(curr == defined_at) break;
-			make_instr("addi",4,l);
-			make_instr("loadi",make_index(l),l);
+			make_instr("loadi",make_index(l,4),l);
 			curr = curr->parent;
 		}
 		mem_offset = curr->GetEntry(name->get_id())->offset;
